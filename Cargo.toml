@@ -1,0 +1,10 @@
+[package]
+name = "swapdoodle-migration-tool"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+ctru-rs = { git = "https://github.com/rust3ds/ctru-rs" }
+
+[package.metadata.cargo-3ds]
+romfs_dir = "romfs"
