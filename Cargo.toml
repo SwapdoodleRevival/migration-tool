@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 ctru-rs = { git = "https://github.com/rust3ds/ctru-rs" }
+ctru-sys = { git = "https://github.com/rust3ds/ctru-rs" }
 libdoodle = { git = "https://github.com/SwapdoodleRevival/libdoodle.git", version = "0.1.0" }
 
 [package.metadata.cargo-3ds]

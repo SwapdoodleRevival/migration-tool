@@ -1,13 +1,26 @@
 use ctru::prelude::*;
 
+mod friend_list;
+
 fn main() {
     let apt = Apt::new().unwrap();
     let mut hid = Hid::new().unwrap();
     let gfx = Gfx::new().unwrap();
-    let _console = Console::new(gfx.top_screen.borrow_mut());
+    // let mut soc = Soc::new().unwrap();
+    // soc.redirect_to_3dslink(true, true).unwrap();
+    ctru::applets::error::set_panic_hook(true);
 
-    println!("Hello, World!");
-    println!("\x1b[29;16HPress Start to exit");
+    let topConsole = Console::new(gfx.top_screen.borrow_mut());
+    let bottomConsole = Console::new(gfx.bottom_screen.borrow_mut());
+
+    topConsole.select();
+
+    for (pid, mii) in friend_list::load_friend_list() {
+        println!("{}: asdf", pid);
+        mii.iter().for_each(|b| print!("{b:X} "));
+        println!();
+        break;
+    }
 
     while apt.main_loop() {
         gfx.wait_for_vblank();

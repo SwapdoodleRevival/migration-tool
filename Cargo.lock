@@ -522,6 +522,7 @@ name = "swapdoodle-migration-tool"
 version = "0.1.0"
 dependencies = [
  "ctru-rs",
+ "ctru-sys",
  "libdoodle",
 ]
 
