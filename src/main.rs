@@ -16,10 +16,7 @@ fn main() {
     topConsole.select();
 
     for (pid, mii) in friend_list::load_friend_list() {
-        println!("{}: asdf", pid);
-        mii.iter().for_each(|b| print!("{b:X} "));
-        println!();
-        break;
+        println!("{}: {}", pid, mii.mii_name);
     }
 
     while apt.main_loop() {
