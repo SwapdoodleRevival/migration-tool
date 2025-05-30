@@ -1,6 +1,7 @@
 use ctru::prelude::*;
 
 mod friend_list;
+mod extdata;
 
 fn main() {
     let apt = Apt::new().unwrap();
@@ -17,6 +18,14 @@ fn main() {
 
     for (pid, mii) in friend_list::load_friend_list() {
         println!("{}: {}", pid, mii.mii_name);
+    }
+
+    println!("Reading notes:");
+    for (file, filename, letter) in extdata::read() {
+        println!("Got {} from {}", filename, match letter.sender_mii {
+            Some(mii) => mii.mii_name,
+            None => "<no mii>".to_string()
+        });
     }
 
     while apt.main_loop() {

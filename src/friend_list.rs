@@ -77,10 +77,10 @@ unsafe fn get_friend_info(handle: Handle) -> ([FriendKey; 100], [FriendInfo; 100
         *cmdbuf.wrapping_add(2) = 0;
         *cmdbuf.wrapping_add(3) = 0;
         *cmdbuf.wrapping_add(4) =
-            IPC_Desc_StaticBuffer(num_friends * mem::size_of::<FriendKey>() as u32, 0);
+            (num_friends * mem::size_of::<FriendKey>() as u32) << 14 | ((0 & 0xF) << 10) | 0x2;
         *cmdbuf.wrapping_add(5) = &friend_keys[0] as *const _ as u32;
         *cmdbuf.wrapping_add(6) =
-            IPC_Desc_Buffer(num_friends * mem::size_of::<FriendInfo>() as u32);
+            (num_friends * mem::size_of::<FriendInfo>() as u32) << 4 | 0x8 | 0b100;
         *cmdbuf.wrapping_add(7) = &mut friend_info[0] as *mut _ as u32;
 
         _ = ctru_sys::svcSendSyncRequest(handle);
@@ -91,14 +91,6 @@ unsafe fn get_friend_info(handle: Handle) -> ([FriendKey; 100], [FriendInfo; 100
 
         (friend_keys.clone(), friend_info, num_friends)
     }
-}
-
-fn IPC_Desc_StaticBuffer(size: u32, buffer_id: u32) -> u32 {
-    size << 14 | ((buffer_id & 0xF) << 10) | 0x2
-}
-
-fn IPC_Desc_Buffer(size: u32) -> u32 {
-    (size << 4) | 0x8 | 0b100
 }
 
 /*

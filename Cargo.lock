@@ -71,9 +71,9 @@ checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
 
 [[package]]
 name = "cc"
-version = "1.2.24"
+version = "1.2.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16595d3be041c03b09d08d0858631facccee9221e579704070e6e9e4915d3bc7"
+checksum = "d0fc897dc1e865cc67c0e05a836d9d3f1df3cbe442aa4a9473b18e12624a4951"
 dependencies = [
  "shlex",
 ]
@@ -237,7 +237,7 @@ checksum = "d750af042f7ef4f724306de029d18836c26c1765a54a6a3f094cbd23a7267ffa"
 [[package]]
 name = "libdoodle"
 version = "0.1.0"
-source = "git+https://github.com/SwapdoodleRevival/libdoodle.git#6f615fd065496c14d7310aa5f139abd1be82c490"
+source = "git+https://github.com/SwapdoodleRevival/libdoodle.git#99030bd899910c80c94e4103ab6c895773512600"
 dependencies = [
  "chrono",
  "crc",
