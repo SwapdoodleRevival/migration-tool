@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    io::{self, Write},
+    io::{self, Write}, ops::Rem,
 };
 
 use ctru::{console::Axis, prelude::*};
@@ -15,87 +15,38 @@ fn main() {
     app_loop();
 }
 
-//                       -- PID of note sender
+//                       .- PID of note sender
 //                       v      .- PID of friend
 type Remapping = HashMap<u32, u32>;
+
+struct Services<'a> {
+    apt: &'a Apt,
+    hid: &'a mut Hid,
+    gfx: &'a Gfx,
+    bottom_console: &'a Console<'a>,
+    top_console: &'a Console<'a>,
+}
 
 fn app_loop() {
     let apt = Apt::new().unwrap();
     let mut hid = Hid::new().unwrap();
-    let gfx = Gfx::new().unwrap();
+    let gfx: Gfx = Gfx::new().unwrap();
     let bottom_console = Console::new(gfx.bottom_screen.borrow_mut());
     let top_console = Console::new(gfx.top_screen.borrow_mut());
+
+    let mut services = Services {
+        apt: &apt,
+        gfx: &gfx,
+        hid: &mut hid,
+        bottom_console: &bottom_console,
+        top_console: &top_console,
+    };
 
     let friends: MiiMap;
     let doodles: MiiMap;
     let mapping = Remapping::new();
 
-    introduce();
-
-    loop {
-        if !apt.main_loop() {
-            return;
-        }
-
-        gfx.wait_for_vblank();
-
-        hid.scan_input();
-
-        if hid.keys_down().contains(KeyPad::START) {
-            return;
-        }
-        if hid.keys_down().contains(KeyPad::A) {
-            (friends, doodles) = friendly_read_data();
-            break;
-        }
-    }
-
-    let mut hover: usize = 0;
-    let mut dirty = true;
-
-    loop {
-        if !apt.main_loop() {
-            return;
-        }
-
-        gfx.wait_for_vblank();
-
-        if dirty {
-            dirty = false;
-            print_top_screen(&top_console, &doodles, &friends, &mapping, hover);
-        }
-
-        hid.scan_input();
-
-        if hid.keys_down().contains(KeyPad::START) {
-            return;
-        }
-
-        if hid.keys_down().contains(KeyPad::DPAD_UP) {
-            if hover != 0 {
-                dirty = true;
-                hover -= 1;
-            }
-        }
-
-        if hid.keys_down().contains(KeyPad::DPAD_DOWN) {
-            if hover != (doodles.len() - 1) {
-                dirty = true;
-                hover += 1;
-            }
-        }
-
-        if hid.keys_down().contains(KeyPad::A) {
-            print!("\x1b[27;0H\x1b[1;37;41m");
-            print_center("");
-            print_center("Look at the bottom screen.");
-            print_center("");
-            bottom_console.select();
-            pick_friend(&bottom_console, &friends);
-            top_console.select();
-            println!("\x1b[0m");
-        }
-    }
+    (friends, doodles) = phase_intro(&mut services).unwrap();
 }
 
 fn print_top_screen(
@@ -130,7 +81,19 @@ fn pick_friend(con: &Console, friends: &MiiMap) {
     println!("Select a friend:");
 }
 
-fn introduce() {
+fn process_services(s: &mut Services) -> Result<(), ()> {
+    if !s.apt.main_loop() {
+        return Err(());
+    }
+    s.gfx.wait_for_vblank();
+    s.hid.scan_input();
+    if s.hid.keys_down().contains(KeyPad::START) {
+        return Err(());
+    }
+    Ok(())
+}
+
+fn phase_intro(s: &mut Services) -> Result<(MiiMap, MiiMap), ()> {
     println!();
     print_center("Swapdoodle migration tool");
     println!();
@@ -143,6 +106,64 @@ fn introduce() {
     );
     println!();
     print_center("Press (A) to begin");
+
+    loop {
+        process_services(s)?;
+
+        if s.hid.keys_down().contains(KeyPad::A) {
+            let friends;
+            let doodles;
+            (friends, doodles) = friendly_read_data();
+            return Ok((friends, doodles));
+        }
+    }
+}
+
+fn phase_select(s: &mut Services, doodles: &MiiMap, friends: &MiiMap, mapping: &Remapping) {
+    let mut hover: usize = 0;
+    let mut dirty = true;
+
+    loop {
+        if !s.apt.main_loop() {
+            return;
+        }
+        s.gfx.wait_for_vblank();
+        s.hid.scan_input();
+
+        if dirty {
+            dirty = false;
+            print_top_screen(s.top_console, &doodles, &friends, &mapping, hover);
+        }
+
+        if s.hid.keys_down().contains(KeyPad::START) {
+            return;
+        }
+
+        if s.hid.keys_down().contains(KeyPad::DPAD_UP) {
+            if hover != 0 {
+                dirty = true;
+                hover -= 1;
+            }
+        }
+
+        if s.hid.keys_down().contains(KeyPad::DPAD_DOWN) {
+            if hover != (doodles.len() - 1) {
+                dirty = true;
+                hover += 1;
+            }
+        }
+
+        if s.hid.keys_down().contains(KeyPad::A) {
+            print!("\x1b[27;0H\x1b[1;37;41m");
+            print_center("");
+            print_center("Look at the bottom screen.");
+            print_center("");
+            s.bottom_console.select();
+            pick_friend(&s.bottom_console, &friends);
+            s.top_console.select();
+            println!("\x1b[0m");
+        }
+    }
 }
 
 fn friendly_read_data() -> (MiiMap, MiiMap) {
