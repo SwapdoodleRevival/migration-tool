@@ -1,10 +1,9 @@
-use ctru::prelude::{Console, KeyPad};
+use std::collections::HashMap;
 
-use crate::{
-    AppData, Remapping, Services,
-    friend_list::MiiMap,
-    phases::print_center,
-};
+use ctru::prelude::{Console, KeyPad};
+use ctru_sys::MiiData;
+
+use crate::{AppData, Remapping, Services, friend_list::MiiMap, phases::print_center};
 
 pub fn mapping(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
     let mut hover: usize = 0;
@@ -15,7 +14,7 @@ pub fn mapping(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
 
         if dirty {
             dirty = false;
-            print_top_screen(
+            print_mapping_picker(
                 &s.top_console,
                 &data.doodles,
                 &data.friends,
@@ -44,7 +43,12 @@ pub fn mapping(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
             print_center("Select the friend to map to.");
             print_center("");
             s.bottom_console.select();
-            pick_friend(s, data)?;
+
+            let friend_pid = pick_friend(s, data)?;
+            let doodler_pid = get_nth(hover, &data.doodles).unwrap();
+
+            data.mapping.insert(doodler_pid, friend_pid);
+
             s.bottom_console.clear();
             s.top_console.select();
             println!("\x1b[0m");
@@ -53,7 +57,7 @@ pub fn mapping(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
     }
 }
 
-fn pick_friend(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
+fn pick_friend(s: &mut Services, data: &mut AppData) -> Result<u32, ()> {
     s.bottom_console.clear();
 
     let mut hover: usize = 0;
@@ -69,7 +73,7 @@ fn pick_friend(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
         if dirty {
             dirty = false;
             s.bottom_console.clear();
-            print_bottom_screen(&data, hover);
+            print_friend_picker(&data, hover);
         }
 
         if s.hid.keys_down().contains(KeyPad::DPAD_UP) {
@@ -87,12 +91,22 @@ fn pick_friend(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
         }
 
         if s.hid.keys_down().contains(KeyPad::A) {
-            return Ok(());
+            return Ok(get_nth(hover, &data.friends).unwrap());
         }
     }
 }
 
-fn print_top_screen(
+fn get_nth(mut index: usize, container: &MiiMap) -> Option<u32> {
+    for element in container {
+        if index == 0 {
+            return Some(*element.0);
+        }
+        index -= 1;
+    }
+    return None;
+}
+
+fn print_mapping_picker(
     con: &Console,
     doodles: &MiiMap,
     friends: &MiiMap,
@@ -119,7 +133,7 @@ fn print_top_screen(
     }
 }
 
-fn print_bottom_screen(data: &AppData, hover: usize) {
+fn print_friend_picker(data: &AppData, hover: usize) {
     let mut index: usize = 0;
 
     for (pid, mii) in &data.friends {
