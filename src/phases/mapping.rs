@@ -38,16 +38,21 @@ pub fn mapping(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
         }
 
         if s.hid.keys_down().contains(KeyPad::A) {
-            print!("\x1b[27;0H\x1b[1;37;41m");
+            print!("\x1b[26;0H\x1b[1;37;41m");
             print_center("");
             print_center("Select the friend to map to.");
+            print_center("(A) Select, (B) Cancel, (X) Clear");
             print_center("");
             s.bottom_console.select();
 
-            let friend_pid = pick_friend(s, data)?;
-            let doodler_pid = get_nth(hover, &data.doodles).unwrap();
-
-            data.mapping.insert(doodler_pid, friend_pid);
+            if let Some(friend_pid) = pick_friend(s, data)? {
+                let doodler_pid = get_nth(hover, &data.doodles).unwrap();
+                if friend_pid != 0 {
+                    data.mapping.insert(doodler_pid, friend_pid);
+                } else {
+                    data.mapping.remove(&doodler_pid);
+                }
+            }
 
             s.bottom_console.clear();
             s.top_console.select();
@@ -57,7 +62,7 @@ pub fn mapping(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
     }
 }
 
-fn pick_friend(s: &mut Services, data: &mut AppData) -> Result<u32, ()> {
+fn pick_friend(s: &mut Services, data: &mut AppData) -> Result<Option<u32>, ()> {
     s.bottom_console.clear();
 
     let mut hover: usize = 0;
@@ -91,7 +96,15 @@ fn pick_friend(s: &mut Services, data: &mut AppData) -> Result<u32, ()> {
         }
 
         if s.hid.keys_down().contains(KeyPad::A) {
-            return Ok(get_nth(hover, &data.friends).unwrap());
+            return Ok(Some(get_nth(hover, &data.friends).unwrap()));
+        }
+
+        if s.hid.keys_down().contains(KeyPad::B) {
+            return Ok(None);
+        }
+
+        if s.hid.keys_down().contains(KeyPad::X) {
+            return Ok(Some(0));
         }
     }
 }
