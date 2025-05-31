@@ -45,7 +45,6 @@ fn app_loop() {
             return;
         }
         if hid.keys_down().contains(KeyPad::A) {
-            println!();
             (friends, doodles) = friendly_read_data();
             break;
         }
@@ -87,14 +86,25 @@ fn app_loop() {
         }
 
         if hid.keys_down().contains(KeyPad::A) {
+            print!("\x1b[27;0H\x1b[1;37;41m");
+            print_center("");
+            print_center("Look at the bottom screen.");
+            print_center("");
             bottom_console.select();
             pick_friend(&bottom_console, &friends);
             top_console.select();
+            println!("\x1b[0m");
         }
     }
 }
 
-fn print_top_screen(con: &Console, doodles: &MiiMap, friends: &MiiMap, mapping: &Remapping, hover: usize) {
+fn print_top_screen(
+    con: &Console,
+    doodles: &MiiMap,
+    friends: &MiiMap,
+    mapping: &Remapping,
+    hover: usize,
+) {
     con.clear();
 
     let mut index: usize = 0;
