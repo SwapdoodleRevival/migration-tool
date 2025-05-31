@@ -21,7 +21,6 @@ pub fn read() -> impl Iterator<Item = (FS_DirectoryEntry, String, Letter)> {
     // returns (file_path, vec<u8>)
     let extdata_handle: FS_Archive = open_title_extdata(MEDIATYPE_SD, 0x00040000001A2E00).unwrap();
 
-    println!("handle is {}", extdata_handle);
     list_dir(extdata_handle, "/letter/0000\0")
         .into_iter()
         .map(move |v| {

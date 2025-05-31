@@ -22,8 +22,10 @@ use ctru_sys::{FriendInfo, FriendKey, Handle};
 use libdoodle::mii_data::{MiiData, MiiDataBytes};
 use std::{collections::HashMap, mem, ops::Index};
 
+pub type MiiMap = HashMap<u32, MiiData>;
+
 const FRIEND_LIST_SIZE: u32 = 100; // max number of friends is 100
-pub fn load_friend_list() -> HashMap<u32, MiiData> {
+pub fn load_friend_list() -> MiiMap {
     let mut friend_map = HashMap::new();
 
     unsafe {
