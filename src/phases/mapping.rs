@@ -1,13 +1,25 @@
-use std::collections::HashMap;
-
 use ctru::prelude::{Console, KeyPad};
-use ctru_sys::MiiData;
 
 use crate::{AppData, Remapping, Services, friend_list::MiiMap, phases::print_center};
 
 pub fn mapping(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
     let mut hover: usize = 0;
     let mut dirty = true;
+    auto_match_by_mac(data);
+    s.bottom_console.select();
+    //                                                |
+    println!("The migration tool has attempted ");
+    println!("to automatically match");
+    println!("doodle senders (left)");
+    println!("to your friends (right),");
+    println!("based on Mii data.");
+    println!();
+    println!("You are now free to");
+    println!("change these as you please.");
+    println!();
+    println!("Use Up/Down to move the cursor,");
+    println!("and A to change the mapping.");
+    s.top_console.select();
 
     loop {
         s.process()?;
@@ -58,6 +70,18 @@ pub fn mapping(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
             s.top_console.select();
             println!("\x1b[0m");
             dirty = true;
+        }
+    }
+}
+
+fn auto_match_by_mac(data: &mut AppData) {
+    for doodler in &data.doodles {
+        let mac = doodler.1.creator_mac_address;
+        for friend in &data.friends {
+            if friend.1.creator_mac_address == mac {
+                data.mapping.insert(*doodler.0, *friend.0);
+                break;
+            }
         }
     }
 }
