@@ -1,9 +1,9 @@
 use std::{
     collections::HashMap,
-    io::{self, Write}, ops::Rem,
+    io::{self, Write},
 };
 
-use ctru::{console::Axis, prelude::*};
+use ctru::prelude::*;
 use friend_list::MiiMap;
 use libdoodle::mii_data::MiiData;
 
@@ -23,8 +23,14 @@ struct Services<'a> {
     apt: &'a Apt,
     hid: &'a mut Hid,
     gfx: &'a Gfx,
-    bottom_console: &'a Console<'a>,
-    top_console: &'a Console<'a>,
+    bottom_console: Console<'a>,
+    top_console: Console<'a>,
+}
+
+struct AppData {
+    friends: MiiMap,
+    doodles: MiiMap,
+    mapping: Remapping,
 }
 
 fn app_loop() {
@@ -38,15 +44,17 @@ fn app_loop() {
         apt: &apt,
         gfx: &gfx,
         hid: &mut hid,
-        bottom_console: &bottom_console,
-        top_console: &top_console,
+        bottom_console: bottom_console,
+        top_console: top_console,
+    };
+    let mut data = AppData {
+        friends: MiiMap::new(),
+        doodles: MiiMap::new(),
+        mapping: Remapping::new(),
     };
 
-    let friends: MiiMap;
-    let doodles: MiiMap;
-    let mapping = Remapping::new();
-
-    (friends, doodles) = phase_intro(&mut services).unwrap();
+    phase_intro(&mut services, &mut data).unwrap();
+    phase_select(&mut services, &mut data);
 }
 
 fn print_top_screen(
@@ -76,7 +84,7 @@ fn print_top_screen(
     }
 }
 
-fn pick_friend(con: &Console, friends: &MiiMap) {
+fn pick_friend(con: &Console, _friends: &MiiMap) {
     con.clear();
     println!("Select a friend:");
 }
@@ -93,7 +101,7 @@ fn process_services(s: &mut Services) -> Result<(), ()> {
     Ok(())
 }
 
-fn phase_intro(s: &mut Services) -> Result<(MiiMap, MiiMap), ()> {
+fn phase_intro(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
     println!();
     print_center("Swapdoodle migration tool");
     println!();
@@ -111,15 +119,13 @@ fn phase_intro(s: &mut Services) -> Result<(MiiMap, MiiMap), ()> {
         process_services(s)?;
 
         if s.hid.keys_down().contains(KeyPad::A) {
-            let friends;
-            let doodles;
-            (friends, doodles) = friendly_read_data();
-            return Ok((friends, doodles));
+            (data.friends, data.doodles) = friendly_read_data();
+            return Ok(());
         }
     }
 }
 
-fn phase_select(s: &mut Services, doodles: &MiiMap, friends: &MiiMap, mapping: &Remapping) {
+fn phase_select(s: &mut Services, data: &mut AppData) {
     let mut hover: usize = 0;
     let mut dirty = true;
 
@@ -132,7 +138,7 @@ fn phase_select(s: &mut Services, doodles: &MiiMap, friends: &MiiMap, mapping: &
 
         if dirty {
             dirty = false;
-            print_top_screen(s.top_console, &doodles, &friends, &mapping, hover);
+            print_top_screen(&s.top_console, &data.doodles, &data.friends, &data.mapping, hover);
         }
 
         if s.hid.keys_down().contains(KeyPad::START) {
@@ -147,7 +153,7 @@ fn phase_select(s: &mut Services, doodles: &MiiMap, friends: &MiiMap, mapping: &
         }
 
         if s.hid.keys_down().contains(KeyPad::DPAD_DOWN) {
-            if hover != (doodles.len() - 1) {
+            if hover != (data.doodles.len() - 1) {
                 dirty = true;
                 hover += 1;
             }
@@ -159,7 +165,7 @@ fn phase_select(s: &mut Services, doodles: &MiiMap, friends: &MiiMap, mapping: &
             print_center("Look at the bottom screen.");
             print_center("");
             s.bottom_console.select();
-            pick_friend(&s.bottom_console, &friends);
+            pick_friend(&s.bottom_console, &data.friends);
             s.top_console.select();
             println!("\x1b[0m");
         }
@@ -175,7 +181,7 @@ fn friendly_read_data() -> (MiiMap, MiiMap) {
     print!("Reading your Swapdoodle extdata... ");
     _ = io::stdout().flush();
     let mut doodles = HashMap::<u32, MiiData>::new();
-    for (file, filename, letter) in extdata::read() {
+    for (_file, _filename, letter) in extdata::read() {
         if letter.common.sender_pid != 0
             && let Some(mii) = letter.sender_mii
         {
