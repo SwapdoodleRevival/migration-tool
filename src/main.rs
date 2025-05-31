@@ -10,11 +10,6 @@ use libdoodle::mii_data::MiiData;
 mod extdata;
 mod friend_list;
 
-fn main() {
-    ctru::applets::error::set_panic_hook(true);
-    app_loop();
-}
-
 //                       .- PID of note sender
 //                       v      .- PID of friend
 type Remapping = HashMap<u32, u32>;
@@ -27,13 +22,32 @@ struct Services<'a> {
     top_console: Console<'a>,
 }
 
+impl<'a> Services<'a> {
+    fn process(&mut self) -> Result<(), ()> {
+        if !self.apt.main_loop() {
+            return Err(());
+        }
+        self.gfx.wait_for_vblank();
+        self.hid.scan_input();
+        if self.hid.keys_down().contains(KeyPad::START) {
+            return Err(());
+        }
+        Ok(())
+    }
+}
+
 struct AppData {
     friends: MiiMap,
     doodles: MiiMap,
     mapping: Remapping,
 }
 
-fn app_loop() {
+fn main() {
+    ctru::applets::error::set_panic_hook(true);
+    _ = run();
+}
+
+fn run() -> Result<(), ()> {
     let apt = Apt::new().unwrap();
     let mut hid = Hid::new().unwrap();
     let gfx: Gfx = Gfx::new().unwrap();
@@ -47,14 +61,16 @@ fn app_loop() {
         bottom_console: bottom_console,
         top_console: top_console,
     };
+
     let mut data = AppData {
         friends: MiiMap::new(),
         doodles: MiiMap::new(),
         mapping: Remapping::new(),
     };
 
-    phase_intro(&mut services, &mut data).unwrap();
-    phase_select(&mut services, &mut data);
+    phase_intro(&mut services, &mut data)?;
+    phase_select(&mut services, &mut data)?;
+    Ok(())
 }
 
 fn print_top_screen(
@@ -84,21 +100,17 @@ fn print_top_screen(
     }
 }
 
-fn pick_friend(con: &Console, _friends: &MiiMap) {
-    con.clear();
-    println!("Select a friend:");
-}
+fn print_bottom_screen(data: &AppData, hover: usize) {
+    let mut index: usize = 0;
 
-fn process_services(s: &mut Services) -> Result<(), ()> {
-    if !s.apt.main_loop() {
-        return Err(());
+    for (pid, mii) in &data.friends {
+        println!(
+            " {} {}",
+            if index == hover { '>' } else { ' ' },
+            mii.mii_name,
+        );
+        index += 1;
     }
-    s.gfx.wait_for_vblank();
-    s.hid.scan_input();
-    if s.hid.keys_down().contains(KeyPad::START) {
-        return Err(());
-    }
-    Ok(())
 }
 
 fn phase_intro(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
@@ -114,9 +126,11 @@ fn phase_intro(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
     );
     println!();
     print_center("Press (A) to begin");
+    print_center("Press (START) at any time to exit");
+    println!();
 
     loop {
-        process_services(s)?;
+        s.process()?;
 
         if s.hid.keys_down().contains(KeyPad::A) {
             (data.friends, data.doodles) = friendly_read_data();
@@ -125,24 +139,22 @@ fn phase_intro(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
     }
 }
 
-fn phase_select(s: &mut Services, data: &mut AppData) {
+fn phase_select(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
     let mut hover: usize = 0;
     let mut dirty = true;
 
     loop {
-        if !s.apt.main_loop() {
-            return;
-        }
-        s.gfx.wait_for_vblank();
-        s.hid.scan_input();
+        s.process()?;
 
         if dirty {
             dirty = false;
-            print_top_screen(&s.top_console, &data.doodles, &data.friends, &data.mapping, hover);
-        }
-
-        if s.hid.keys_down().contains(KeyPad::START) {
-            return;
+            print_top_screen(
+                &s.top_console,
+                &data.doodles,
+                &data.friends,
+                &data.mapping,
+                hover,
+            );
         }
 
         if s.hid.keys_down().contains(KeyPad::DPAD_UP) {
@@ -162,12 +174,53 @@ fn phase_select(s: &mut Services, data: &mut AppData) {
         if s.hid.keys_down().contains(KeyPad::A) {
             print!("\x1b[27;0H\x1b[1;37;41m");
             print_center("");
-            print_center("Look at the bottom screen.");
+            print_center("Select the friend to map to.");
             print_center("");
             s.bottom_console.select();
-            pick_friend(&s.bottom_console, &data.friends);
+            pick_friend(s, data)?;
+            s.bottom_console.clear();
             s.top_console.select();
             println!("\x1b[0m");
+            dirty = true;
+        }
+    }
+}
+
+fn pick_friend(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
+    s.bottom_console.clear();
+
+    let mut hover: usize = 0;
+    let mut dirty = true;
+
+    for (pid, mii) in &data.friends {
+        println!("- {}", mii.mii_name);
+    }
+
+    loop {
+        s.process()?;
+
+        if dirty {
+            dirty = false;
+            s.bottom_console.clear();
+            print_bottom_screen(&data, hover);
+        }
+
+        if s.hid.keys_down().contains(KeyPad::DPAD_UP) {
+            if hover != 0 {
+                dirty = true;
+                hover -= 1;
+            }
+        }
+
+        if s.hid.keys_down().contains(KeyPad::DPAD_DOWN) {
+            if hover != (data.friends.len() - 1) {
+                dirty = true;
+                hover += 1;
+            }
+        }
+
+        if s.hid.keys_down().contains(KeyPad::A) {
+            return Ok(());
         }
     }
 }
