@@ -161,10 +161,12 @@ fn print_mapping_picker(
         }
 
         println!(
-            " {} {: <23}{: >23}",
+            "{} {} {: <23}{: >23} {}",
+            if index == hover { "\x1b[37;44m" } else { "" },
             if index == hover { '>' } else { ' ' },
             mii.mii_name,
-            friend_name
+            friend_name,
+            if index == hover { "\x1b[0m" } else { "" },
         );
         index += 1;
     }
@@ -173,11 +175,13 @@ fn print_mapping_picker(
 fn print_friend_picker(data: &AppData, hover: usize) {
     let mut index: usize = 0;
 
-    for (pid, mii) in &data.friends {
+    for (_pid, mii) in &data.friends {
         println!(
-            " {} {}",
+            "{} {} {: <37}{}",
+            if index == hover { "\x1b[37;44m" } else { "" },
             if index == hover { '>' } else { ' ' },
             mii.mii_name,
+            if index == hover { "\x1b[0m" } else { "" },
         );
         index += 1;
     }
