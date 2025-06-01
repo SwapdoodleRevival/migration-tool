@@ -1,7 +1,7 @@
-use std::{mem, os::raw::c_void, time::Instant, u32};
+use std::{mem, os::raw::c_void, u32};
 
 use ctru_sys::{
-    self, FS_Archive, FS_DirectoryEntry, FS_MediaType, FS_Path, FSDIR_Close, FSDIR_Control,
+    self, FS_Archive, FS_DirectoryEntry, FS_MediaType, FS_Path, FSDIR_Close,
     FSDIR_Read, FSFILE_Close, FSFILE_Read, FSUSER_OpenArchive, FSUSER_OpenDirectory,
     FSUSER_OpenFile, Handle, MEDIATYPE_SD, PATH_BINARY, PATH_UTF16, R_FAILED, R_SUCCEEDED,
     fsMakePath,
@@ -21,23 +21,44 @@ pub fn read() -> impl Iterator<Item = (FS_DirectoryEntry, String, Letter)> {
     // returns (file_path, vec<u8>)
     let extdata_handle: FS_Archive = open_title_extdata(MEDIATYPE_SD, 0x00040000001A2E00).unwrap();
 
-    list_dir(extdata_handle, "/letter/0000\0")
+    list_dir(extdata_handle, "/letter".to_string())
         .into_iter()
-        .map(move |v| {
-            let filename = String::from_utf16(&v.name).unwrap();
-            let filename = format!("/letter/0000/{filename}\0");
-            let file = read_file(extdata_handle, &filename);
+        // I think I've read somewhere that it does this?
+        // Notes are distributed among folders, so 0000, 0001...
+        // Don't have that many notes to prove it, but better safe then sorry
+        .filter(|(_path, dir)| is_letter_folder(string_from_filename(&dir.name)))
+        .flat_map(move |(_path, dir)| {
+            let directory = format!("/letter/{}", string_from_filename(&dir.name));
+            return list_dir(extdata_handle, directory);
+        })
+        .map(move |(path, entry)| {
+            let file_name = string_from_filename(&entry.name);
+            let file_path = format!("{}/{}", path, file_name);
+            let file = read_file(extdata_handle, &file_path);
             let letter = Letter::new_from_bpk1_bytes(&file).unwrap();
-            (v, filename, letter)
+            (entry, file_path, letter)
         })
 }
 
-struct DirectoryIterator {
+fn is_letter_folder(path: String) -> bool {
+    return path.chars().take(4).all(|c| c.is_numeric());
+}
+
+fn string_from_filename(name: &[u16; 262]) -> String {
+    String::from_utf16(name)
+        .unwrap()
+        .split_terminator('\0')
+        .take(1)
+        .collect()
+}
+
+pub struct DirectoryIterator {
+    path: String,
     handle: Handle,
 }
 
 impl Iterator for DirectoryIterator {
-    type Item = FS_DirectoryEntry;
+    type Item = (String, FS_DirectoryEntry);
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut read: u32 = 0;
@@ -51,7 +72,7 @@ impl Iterator for DirectoryIterator {
             ));
             entry
         };
-        if read == 1 { Some(entry) } else { None }
+        if read == 1 { Some((self.path.clone(), entry)) } else { None }
     }
 }
 
@@ -63,16 +84,17 @@ impl Drop for DirectoryIterator {
     }
 }
 
-fn list_dir(archive: FS_Archive, path: &str) -> DirectoryIterator {
+fn list_dir(archive: FS_Archive, path: String) -> DirectoryIterator {
     unsafe {
         let mut handle: Handle = mem::zeroed();
-        let path: Vec<u16> = path.encode_utf16().collect();
+        let mut path_utf16: Vec<u16> = path.encode_utf16().collect();
+        path_utf16.push(0); // NULL terminator
         handle_error!(FSUSER_OpenDirectory(
             &mut handle as *mut _,
             archive,
-            fsMakePath(PATH_UTF16, path.as_ptr() as *const c_void),
+            fsMakePath(PATH_UTF16, path_utf16.as_ptr() as *const c_void),
         ));
-        DirectoryIterator { handle }
+        DirectoryIterator { path, handle }
     }
 }
 
@@ -103,7 +125,8 @@ fn read_file(archive: FS_Archive, path: &str) -> Vec<u8> {
 
     unsafe {
         let mut handle: Handle = mem::zeroed();
-        let path: Vec<u16> = path.encode_utf16().collect();
+        let mut path: Vec<u16> = path.encode_utf16().collect();
+        path.push(0);
         handle_error!(FSUSER_OpenFile(
             &mut handle as *mut _,
             archive,
