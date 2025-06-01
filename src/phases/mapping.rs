@@ -1,5 +1,3 @@
-use std::time::{Duration, Instant};
-
 use ctru::prelude::{Console, KeyPad};
 
 use crate::{AppData, Remapping, Services, friend_list::MiiMap, phases::print_center};
