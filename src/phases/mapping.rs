@@ -1,3 +1,5 @@
+use std::time::{Duration, Instant};
+
 use ctru::prelude::{Console, KeyPad};
 
 use crate::{AppData, Remapping, Services, friend_list::MiiMap, phases::print_center};
@@ -7,7 +9,7 @@ pub fn mapping(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
     let mut dirty = true;
     auto_match_by_mac(data);
     s.bottom_console.select();
-    //                                                |
+    //       |                 Width                  |
     println!("The migration tool has attempted ");
     println!("to automatically match");
     println!("doodle senders (left)");
@@ -21,8 +23,14 @@ pub fn mapping(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
     println!("and A to change the mapping.");
     s.top_console.select();
 
+    let mut repeated_input_after: u8 = 0;
+
     loop {
         s.process()?;
+
+        if repeated_input_after != 0 {
+            repeated_input_after -= 1;
+        }
 
         if dirty {
             dirty = false;
@@ -40,13 +48,25 @@ pub fn mapping(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
                 dirty = true;
                 hover -= 1;
             }
-        }
-
-        if s.hid.keys_down().contains(KeyPad::DPAD_DOWN) {
+            repeated_input_after = 20;
+        } else if s.hid.keys_down().contains(KeyPad::DPAD_DOWN) {
             if hover != (data.doodles.len() - 1) {
                 dirty = true;
                 hover += 1;
             }
+            repeated_input_after = 20;
+        } else if s.hid.keys_held().contains(KeyPad::DPAD_UP) && repeated_input_after == 0 {
+            if hover != 0 {
+                dirty = true;
+                hover -= 1;
+            }
+            repeated_input_after = 5;
+        } else if s.hid.keys_held().contains(KeyPad::DPAD_DOWN) && repeated_input_after == 0 {
+            if hover != (data.doodles.len() - 1) {
+                dirty = true;
+                hover += 1;
+            }
+            repeated_input_after = 5;
         }
 
         if s.hid.keys_down().contains(KeyPad::A) {
@@ -92,12 +112,14 @@ fn pick_friend(s: &mut Services, data: &mut AppData) -> Result<Option<u32>, ()> 
     let mut hover: usize = 0;
     let mut dirty = true;
 
-    for (pid, mii) in &data.friends {
-        println!("- {}", mii.mii_name);
-    }
+    let mut repeated_input_after: u8 = 0;
 
     loop {
         s.process()?;
+
+        if repeated_input_after != 0 {
+            repeated_input_after -= 1;
+        }
 
         if dirty {
             dirty = false;
@@ -110,13 +132,25 @@ fn pick_friend(s: &mut Services, data: &mut AppData) -> Result<Option<u32>, ()> 
                 dirty = true;
                 hover -= 1;
             }
-        }
-
-        if s.hid.keys_down().contains(KeyPad::DPAD_DOWN) {
+            repeated_input_after = 20;
+        } else if s.hid.keys_down().contains(KeyPad::DPAD_DOWN) {
             if hover != (data.friends.len() - 1) {
                 dirty = true;
                 hover += 1;
             }
+            repeated_input_after = 20;
+        } else if s.hid.keys_held().contains(KeyPad::DPAD_UP) && repeated_input_after == 0 {
+            if hover != 0 {
+                dirty = true;
+                hover -= 1;
+            }
+            repeated_input_after = 5;
+        } else if s.hid.keys_held().contains(KeyPad::DPAD_DOWN) && repeated_input_after == 0 {
+            if hover != (data.friends.len() - 1) {
+                dirty = true;
+                hover += 1;
+            }
+            repeated_input_after = 5;
         }
 
         if s.hid.keys_down().contains(KeyPad::A) {
@@ -152,8 +186,17 @@ fn print_mapping_picker(
 ) {
     con.clear();
 
+    const MAX_LINES: usize = 28;
+
+    let mut line: usize = 0;
     let mut index: usize = 0;
+
     for (pid, mii) in doodles {
+        if (index) < ((hover / MAX_LINES) * MAX_LINES) {
+            index += 1;
+            continue;
+        }
+
         let mut friend_name: String = String::from("<don't map>");
 
         if let Some(friend_pid) = mapping.get(pid) {
@@ -168,14 +211,28 @@ fn print_mapping_picker(
             friend_name,
             if index == hover { "\x1b[0m" } else { "" },
         );
+
+        line += 1;
         index += 1;
+
+        if line == MAX_LINES {
+            println!("... scroll for more ...");
+            break;
+        }
     }
 }
 
 fn print_friend_picker(data: &AppData, hover: usize) {
+    const MAX_LINES: usize = 28;
+
+    let mut line: usize = 0;
     let mut index: usize = 0;
 
     for (_pid, mii) in &data.friends {
+        if (index) < ((hover / MAX_LINES) * MAX_LINES) {
+            index += 1;
+            continue;
+        }
         println!(
             "{} {} {: <37}{}",
             if index == hover { "\x1b[37;44m" } else { "" },
@@ -183,6 +240,12 @@ fn print_friend_picker(data: &AppData, hover: usize) {
             mii.mii_name,
             if index == hover { "\x1b[0m" } else { "" },
         );
+        line += 1;
         index += 1;
+
+        if line == MAX_LINES {
+            println!("... scroll for more ...");
+            break;
+        }
     }
 }
