@@ -4,6 +4,7 @@ use std::{
 };
 
 use ctru::prelude::*;
+use extdata::create_writer;
 use friend_list::MiiMap;
 use libdoodle::mii_data::MiiData;
 

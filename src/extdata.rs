@@ -1,8 +1,8 @@
 use std::{mem, os::raw::c_void, u32};
 
 use ctru_sys::{
-    self, FS_Archive, FS_DirectoryEntry, FS_MediaType, FS_Path, FSDIR_Close,
-    FSDIR_Read, FSFILE_Close, FSFILE_Read, FSUSER_OpenArchive, FSUSER_OpenDirectory,
+    self, FS_Archive, FS_DirectoryEntry, FS_MediaType, FS_Path, FSDIR_Close, FSDIR_Read,
+    FSFILE_Close, FSFILE_Read, FSFILE_Write, FSUSER_OpenArchive, FSUSER_OpenDirectory,
     FSUSER_OpenFile, Handle, MEDIATYPE_SD, PATH_BINARY, PATH_UTF16, R_FAILED, R_SUCCEEDED,
     fsMakePath,
 };
@@ -18,7 +18,7 @@ macro_rules! handle_error {
 }
 
 pub fn read() -> impl Iterator<Item = (FS_DirectoryEntry, String, Letter)> {
-    // returns (file_path, vec<u8>)
+    // TODO: Close this archive
     let extdata_handle: FS_Archive = open_title_extdata(MEDIATYPE_SD, 0x00040000001A2E00).unwrap();
 
     list_dir(extdata_handle, "/letter".to_string())
@@ -52,6 +52,54 @@ fn string_from_filename(name: &[u16; 262]) -> String {
         .collect()
 }
 
+pub struct FileWriter {
+    // TODO: Close this archive
+    archive: FS_Archive,
+}
+
+impl FileWriter {
+    fn write_file(&self, path: String, data: &Vec<u8>) {
+        unsafe {
+            let mut handle: Handle = mem::zeroed();
+            let mut path: Vec<u16> = path.encode_utf16().collect();
+            path.push(0);
+            handle_error!(FSUSER_OpenFile(
+                &mut handle as *mut _,
+                self.archive,
+                fsMakePath(PATH_UTF16, path.as_ptr() as *const c_void),
+                OpenFlags::Write as u32,
+                FileAttributes {
+                    is_directory: false,
+                    is_hidden: false,
+                    is_archive: false,
+                    readonly: true
+                }
+                .into()
+            ));
+
+            let mut written: u32 = 0;
+
+            handle_error!(FSFILE_Write(
+                handle,
+                &mut written as *mut _,
+                0,
+                data.as_ptr() as *const _,
+                data.len() as u32,
+                1
+            ));
+
+            handle_error!(FSFILE_Close(handle));
+        }
+    }
+}
+
+pub fn create_writer(path: String, data: &Vec<u8>) -> FileWriter {
+    let extdata_handle: FS_Archive = open_title_extdata(MEDIATYPE_SD, 0x00040000001A2E00).unwrap();
+    FileWriter {
+        archive: extdata_handle,
+    }
+}
+
 pub struct DirectoryIterator {
     path: String,
     handle: Handle,
@@ -72,7 +120,11 @@ impl Iterator for DirectoryIterator {
             ));
             entry
         };
-        if read == 1 { Some((self.path.clone(), entry)) } else { None }
+        if read == 1 {
+            Some((self.path.clone(), entry))
+        } else {
+            None
+        }
     }
 }
 
