@@ -10,3 +10,6 @@ libdoodle = { git = "https://github.com/SwapdoodleRevival/libdoodle.git", versio
 
 [package.metadata.cargo-3ds]
 romfs_dir = "romfs"
+
+[patch."https://github.com/SwapdoodleRevival/libdoodle.git"]
+libdoodle = { path = "./.vscode/libdoodle" }

@@ -237,7 +237,6 @@ checksum = "d750af042f7ef4f724306de029d18836c26c1765a54a6a3f094cbd23a7267ffa"
 [[package]]
 name = "libdoodle"
 version = "0.1.0"
-source = "git+https://github.com/SwapdoodleRevival/libdoodle.git#99030bd899910c80c94e4103ab6c895773512600"
 dependencies = [
  "chrono",
  "crc",
