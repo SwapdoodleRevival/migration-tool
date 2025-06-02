@@ -11,6 +11,7 @@ use libdoodle::mii_data::MiiData;
 mod extdata;
 mod friend_list;
 mod phases;
+pub mod menu;
 
 //                       .- PID of note sender
 //                       v      .- PID of friend
