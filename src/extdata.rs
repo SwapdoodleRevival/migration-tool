@@ -17,15 +17,17 @@ macro_rules! handle_error {
     };
 }
 
+const TID: u64 = 0x00040000001A2D00;
+
 pub fn read_manage() -> Vec<u8> {
     // TODO: Close this archive
-    let extdata_handle: FS_Archive = open_title_extdata(MEDIATYPE_SD, 0x00040000001A2E00).unwrap();
+    let extdata_handle: FS_Archive = open_title_extdata(MEDIATYPE_SD, TID).unwrap();
     read_file(extdata_handle, "/letter/manage.bin")
 }
 
 pub fn read<T: BPK1File>() -> impl Iterator<Item = (FS_DirectoryEntry, String, T)> {
     // TODO: Close this archive
-    let extdata_handle: FS_Archive = open_title_extdata(MEDIATYPE_SD, 0x00040000001A2E00).unwrap();
+    let extdata_handle: FS_Archive = open_title_extdata(MEDIATYPE_SD, TID).unwrap();
 
     list_dir(extdata_handle, "/letter".to_string())
         // I think I've read somewhere that it does this?
@@ -100,7 +102,7 @@ impl FileWriter {
 }
 
 pub fn create_writer() -> FileWriter {
-    let extdata_handle: FS_Archive = open_title_extdata(MEDIATYPE_SD, 0x00040000001A2E00).unwrap();
+    let extdata_handle: FS_Archive = open_title_extdata(MEDIATYPE_SD, TID).unwrap();
     FileWriter {
         archive: extdata_handle,
     }

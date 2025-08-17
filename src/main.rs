@@ -67,6 +67,7 @@ fn run() -> Result<(), ()> {
     };
 
     phases::intro(&mut services, &mut data)?;
+    phases::reading(&mut services, &mut data)?;
     phases::mapping(&mut services, &mut data)?;
     phases::rewrite(&mut services, &mut data)?;
     Ok(())

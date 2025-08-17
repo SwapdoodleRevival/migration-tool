@@ -2,10 +2,7 @@ use ctru::prelude::{Console, KeyPad};
 
 use crate::{AppData, Remapping, Services, friend_list::MiiMap, phases::print_center};
 
-pub fn mapping(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
-    let mut hover: usize = 0;
-    let mut dirty = true;
-    auto_match_by_mac(data);
+fn bottom_message(s: &mut Services) {
     s.bottom_console.select();
     //       |                 Width                  |
     println!("The migration tool has attempted ");
@@ -18,8 +15,17 @@ pub fn mapping(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
     println!("change these as you please.");
     println!();
     println!("Use Up/Down to move the cursor,");
-    println!("and A to change the mapping.");
+    println!("and (A) to change the mapping.");
+    println!();
+    println!("When you are done, press (Y).");
     s.top_console.select();
+}
+
+pub fn mapping(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
+    let mut hover: usize = 0;
+    let mut dirty = true;
+    auto_match_by_mac(data);
+    bottom_message(s);
 
     let mut repeated_input_after: u8 = 0;
 
@@ -83,6 +89,7 @@ pub fn mapping(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
             }
 
             s.bottom_console.clear();
+            bottom_message(s);
             s.top_console.select();
             println!("\x1b[0m");
             dirty = true;
@@ -92,6 +99,8 @@ pub fn mapping(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
             break;
         }
     }
+
+    s.bottom_console.clear();
 
     Ok(())
 }

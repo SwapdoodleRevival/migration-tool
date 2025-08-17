@@ -23,39 +23,25 @@ pub fn intro(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
     println!(
         "After using this tool, your notes will be moved\nfrom \"Unknown sender\"\nto your friends' profiles."
     );
+    println!("\x1b[37;41m");
+    println!("Please note: This tool does not back up");
+    println!("your save data before migrating!");
     println!();
+    println!("If you do *not* have a backup,");
+    println!("make one now using Checkpoint.");
+    println!();
+    println!("\x1b[0m");
     print_center("Press (A) to begin");
-    print_center("Press (START) at any time to exit");
+    println!();
+    print_center("Press (START) to exit");
+    print_center("(you can do this at any time)");
     println!();
 
     loop {
         s.process()?;
 
         if s.hid.keys_down().contains(KeyPad::A) {
-            (data.friends, data.doodles) = friendly_read_data();
             return Ok(());
         }
     }
-}
-
-fn friendly_read_data() -> (MiiMap, MiiMap) {
-    print!("Reading your friend list... ");
-    _ = io::stdout().flush();
-
-    let friends = friend_list::load_friend_list();
-    println!("done!");
-
-    print!("Reading your Swapdoodle extdata... ");
-    _ = io::stdout().flush();
-    let mut doodles = HashMap::<u32, MiiData>::new();
-    for (_file, _filename, letter) in extdata::read::<Letter>() {
-        if letter.common.sender_pid != 0
-            && let Some(mii) = letter.sender_mii
-        {
-            doodles.insert(letter.common.sender_pid, mii);
-        }
-    }
-    println!("done!");
-
-    (friends, doodles)
 }

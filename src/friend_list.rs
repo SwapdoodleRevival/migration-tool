@@ -32,10 +32,10 @@ unsafe fn get_friend_info(friend_map: &mut MiiMap, handle: Handle) {
 
         let cmdbuf = ctru_sys::getThreadCommandBuffer();
         *cmdbuf = 0x110080;
-        *cmdbuf.wrapping_add(1) = 0x0;
         // offset 0 = take all friends
-        *cmdbuf.wrapping_add(2) = FRIEND_LIST_SIZE;
+        *cmdbuf.wrapping_add(1) = 0x0;
         // max number of friends is 100
+        *cmdbuf.wrapping_add(2) = FRIEND_LIST_SIZE;
         *cmdbuf.wrapping_add(64) = (FRIEND_LIST_SIZE << 18) | 2;
         *cmdbuf.wrapping_add(65) = &mut friend_keys[0] as *mut _ as u32;
 
@@ -50,7 +50,7 @@ unsafe fn get_friend_info(friend_map: &mut MiiMap, handle: Handle) {
         let cmdbuf = ctru_sys::getThreadCommandBuffer();
         *cmdbuf = 0x1A00C4;
         *cmdbuf.wrapping_add(1) = num_friends;
-        *cmdbuf.wrapping_add(2) = 0;
+        *cmdbuf.wrapping_add(2) = 1; // Mask non-ascii characters
         *cmdbuf.wrapping_add(3) = 0;
         *cmdbuf.wrapping_add(4) = ((num_friends * mem::size_of::<FriendKey>() as u32) << 14) | 0x2;
         *cmdbuf.wrapping_add(5) = &friend_keys[0] as *const _ as u32;

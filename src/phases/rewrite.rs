@@ -19,7 +19,7 @@ use crate::{
 pub fn rewrite(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
     s.top_console.clear();
     println!("The tool will now start rewriting your Swapdoodle save data.");
-    println!("THIS TOOL DOES NOT CREATE A BACKUP!!!");
+    println!("Reminder: THIS TOOL DOES NOT CREATE A BACKUP!!!");
     println!("If you do *not* have one, DO NOT CONTINUE!!!");
     println!();
     println!("Press (A) to begin");
