@@ -1,4 +1,4 @@
-use std::{mem, os::raw::c_void, u32};
+use std::{mem, os::raw::c_void};
 
 use ctru_sys::{
     self, FS_Archive, FS_DirectoryEntry, FS_MediaType, FS_Path, FSDIR_Close, FSDIR_Read,
@@ -6,10 +6,7 @@ use ctru_sys::{
     FSUSER_OpenArchive, FSUSER_OpenDirectory, FSUSER_OpenFile, Handle, MEDIATYPE_SD, PATH_BINARY,
     PATH_UTF16, R_FAILED, R_SUCCEEDED, fsMakePath,
 };
-use libdoodle::{
-    bpk1::{BPK1Blocks, BPK1File},
-    files::letter::Letter,
-};
+use libdoodle::bpk1::BPK1File;
 
 macro_rules! handle_error {
     ($res: expr) => {
@@ -31,14 +28,13 @@ pub fn read<T: BPK1File>() -> impl Iterator<Item = (FS_DirectoryEntry, String, T
     let extdata_handle: FS_Archive = open_title_extdata(MEDIATYPE_SD, 0x00040000001A2E00).unwrap();
 
     list_dir(extdata_handle, "/letter".to_string())
-        .into_iter()
         // I think I've read somewhere that it does this?
         // Notes are distributed among folders, so 0000, 0001...
         // Don't have that many notes to prove it, but better safe then sorry
         .filter(|(_path, dir)| is_letter_folder(string_from_filename(&dir.name)))
         .flat_map(move |(_path, dir)| {
             let directory = format!("/letter/{}", string_from_filename(&dir.name));
-            return list_dir(extdata_handle, directory);
+            list_dir(extdata_handle, directory)
         })
         .map(move |(path, entry)| {
             let file_name = string_from_filename(&entry.name);
@@ -50,7 +46,7 @@ pub fn read<T: BPK1File>() -> impl Iterator<Item = (FS_DirectoryEntry, String, T
 }
 
 fn is_letter_folder(path: String) -> bool {
-    return path.chars().take(4).all(|c| c.is_numeric());
+    path.chars().take(4).all(|c| c.is_numeric())
 }
 
 fn string_from_filename(name: &[u16; 262]) -> String {
@@ -67,7 +63,7 @@ pub struct FileWriter {
 }
 
 impl FileWriter {
-    pub fn write_file(&self, path: &str, data: &Vec<u8>) {
+    pub fn write_file(&self, path: &str, data: &[u8]) {
         unsafe {
             let mut handle: Handle = mem::zeroed();
             let mut path: Vec<u16> = path.encode_utf16().collect();
@@ -175,9 +171,9 @@ struct FileAttributes {
     readonly: bool,
 }
 
-impl Into<u32> for FileAttributes {
-    fn into(self) -> u32 {
-        unsafe { mem::transmute(self) }
+impl From<FileAttributes> for u32 {
+    fn from(val: FileAttributes) -> Self {
+        unsafe { mem::transmute(val) }
     }
 }
 

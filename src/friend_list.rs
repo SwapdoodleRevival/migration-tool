@@ -26,7 +26,7 @@ pub fn load_friend_list() -> MiiMap {
 
 unsafe fn get_friend_info(friend_map: &mut MiiMap, handle: Handle) {
     unsafe {
-        let mut num_friends = 0u32;
+        let num_friends;
         let mut friend_keys: [FriendKey; 100] = mem::zeroed();
         let mut friend_info: [FriendInfo; 100] = mem::zeroed();
 
@@ -52,8 +52,7 @@ unsafe fn get_friend_info(friend_map: &mut MiiMap, handle: Handle) {
         *cmdbuf.wrapping_add(1) = num_friends;
         *cmdbuf.wrapping_add(2) = 0;
         *cmdbuf.wrapping_add(3) = 0;
-        *cmdbuf.wrapping_add(4) =
-            (num_friends * mem::size_of::<FriendKey>() as u32) << 14 | ((0 & 0xF) << 10) | 0x2;
+        *cmdbuf.wrapping_add(4) = ((num_friends * mem::size_of::<FriendKey>() as u32) << 14) | 0x2;
         *cmdbuf.wrapping_add(5) = &friend_keys[0] as *const _ as u32;
         *cmdbuf.wrapping_add(6) =
             (num_friends * mem::size_of::<FriendInfo>() as u32) << 4 | 0x8 | 0b100;

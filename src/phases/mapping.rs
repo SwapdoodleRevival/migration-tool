@@ -26,9 +26,7 @@ pub fn mapping(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
     loop {
         s.process()?;
 
-        if repeated_input_after != 0 {
-            repeated_input_after -= 1;
-        }
+        repeated_input_after = repeated_input_after.saturating_sub(1);
 
         if dirty {
             dirty = false;
@@ -121,14 +119,12 @@ fn pick_friend(s: &mut Services, data: &mut AppData) -> Result<Option<u32>, ()> 
     loop {
         s.process()?;
 
-        if repeated_input_after != 0 {
-            repeated_input_after -= 1;
-        }
+        repeated_input_after = repeated_input_after.saturating_sub(1);
 
         if dirty {
             dirty = false;
             s.bottom_console.clear();
-            print_friend_picker(&data, hover);
+            print_friend_picker(data, hover);
         }
 
         if s.hid.keys_down().contains(KeyPad::DPAD_UP) {
@@ -178,7 +174,7 @@ fn get_nth(mut index: usize, container: &MiiMap) -> Option<u32> {
         }
         index -= 1;
     }
-    return None;
+    None
 }
 
 fn print_mapping_picker(
@@ -232,7 +228,7 @@ fn print_friend_picker(data: &AppData, hover: usize) {
     let mut line: usize = 0;
     let mut index: usize = 0;
 
-    for (_pid, mii) in &data.friends {
+    for mii in data.friends.values() {
         if (index) < ((hover / MAX_LINES) * MAX_LINES) {
             index += 1;
             continue;

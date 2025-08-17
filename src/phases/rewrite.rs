@@ -1,25 +1,18 @@
 use std::{
     collections::HashMap,
-    ffi::CString,
-    io::{self, Write},
+    io::Write,
 };
 
-use std::{
-    error::Error,
-    fmt::Display,
-    io::{BufRead, Cursor, Seek, SeekFrom},
-};
+use std::io::{Cursor, Seek};
 
 use ctru::prelude::KeyPad;
 use libdoodle::{
     blocks::common1,
-    bpk1::{BPK1Block, BPK1Blocks, BPK1File},
-    files::letter::Letter,
+    bpk1::{BPK1Blocks, BPK1File},
 };
 
 use crate::{
     AppData, Services, extdata,
-    friend_list::{self, MiiMap},
     read::ReadExt,
 };
 
@@ -62,7 +55,7 @@ fn do_rewrite(mapping: &HashMap<u32, u32>) {
 
     println!("Reading manage.bin...");
     let mut manage = BPK1Blocks::new_from_bpk1_bytes(&extdata::read_manage()).unwrap();
-    let mut cominf = manage
+    let cominf = manage
         .iter_mut()
         .find(|k| k.name.as_bytes() == b"COMINF0")
         .expect("manage.bin should have a COMINF0, but it doesn't!");
@@ -71,7 +64,7 @@ fn do_rewrite(mapping: &HashMap<u32, u32>) {
 
     let count = cursor.read_u32_le().unwrap();
     cursor.set_position(0x40);
-    for i in 0..count {
+    for _ in 0..count {
         let pos = cursor.position();
         let sender_pid =
             common1::CommonInfo::from_bytes(&(cursor.read_const_num_of_bytes::<0x40>().unwrap()))
@@ -81,7 +74,7 @@ fn do_rewrite(mapping: &HashMap<u32, u32>) {
 
         if let Some(new_pid) = mapping.get(&sender_pid) {
             cursor.seek_relative(24).unwrap();
-            cursor.write(&u32::to_le_bytes(*new_pid)).unwrap();
+            cursor.write_all(&u32::to_le_bytes(*new_pid)).unwrap();
         }
 
         cursor.set_position(pos + 0x80);

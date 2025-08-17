@@ -56,8 +56,8 @@ fn run() -> Result<(), ()> {
         apt: &apt,
         gfx: &gfx,
         hid: &mut hid,
-        bottom_console: bottom_console,
-        top_console: top_console,
+        bottom_console,
+        top_console,
     };
 
     let mut data = AppData {
