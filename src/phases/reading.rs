@@ -1,15 +1,20 @@
 use std::{
     collections::HashMap,
-    io::{self, Write},
+    io::{self, Cursor, Write},
 };
 
 use ctru::{prelude::KeyPad, services::cfgu::Region};
-use libdoodle::{blocks::miistd1::MiiData, files::letter::Letter};
+use libdoodle::{
+    blocks::{common1, miistd1::MiiData},
+    bpk1::{BPK1Blocks, BPK1File},
+    files::letter::Letter,
+};
 
 use crate::{
     AppData, Services,
     extdata::{self, ExtdataArchive, SwapdoodleRegion},
     friend_list::{self, MiiMap},
+    read::ReadExt,
 };
 
 pub fn reading(s: &mut Services, data: &mut AppData) -> Result<ExtdataArchive, ()> {
@@ -40,17 +45,54 @@ fn friendly_read_data(extdata: &ExtdataArchive) -> (MiiMap, MiiMap) {
     let friends = friend_list::load_friend_list();
     println!("done!");
 
-    print!("Reading your Swapdoodle extdata... ");
-    _ = io::stdout().flush();
-    let mut doodles = HashMap::<u32, MiiData>::new();
-    for (_file, _filename, letter) in extdata.read::<Letter>() {
-        if letter.common.sender_pid != 0
-            && let Some(mii) = letter.sender_mii
-        {
-            doodles.insert(letter.common.sender_pid, mii);
+    println!("Reading your Swapdoodle extdata... ");
+
+    println!("Reading file /letter/manage.bin...");
+    let mut manage = BPK1Blocks::new_from_bpk1_bytes(&extdata.read_manage()).unwrap();
+    let cominf = manage
+        .iter_mut()
+        .find(|k| k.name.as_bytes() == b"COMINF0")
+        .expect("File /letter/manage.bin should have a COMINF0, but it doesn't!");
+
+    let mut cursor = Cursor::new(&cominf.data);
+
+    let mut unknown_pids = HashMap::<u32, u32>::new();
+
+    let count = cursor.read_u32_le().unwrap();
+    cursor.set_position(0x40);
+
+    for _ in 0..count {
+        let pos = cursor.position();
+        let common =
+            common1::CommonInfo::from_bytes(&(cursor.read_const_num_of_bytes::<0x40>().unwrap()))
+                .unwrap();
+        let sender_pid = common.sender_pid;
+
+        if let None = friends.get(&sender_pid) {
+            let letter_key = cursor.read_u32_le().unwrap();
+            unknown_pids.insert(sender_pid, letter_key);
         }
+
+        cursor.set_position(pos + 0x80);
     }
-    println!("done!");
+    println!("done.");
+
+    let mut doodles = HashMap::<u32, MiiData>::new();
+
+    unknown_pids.iter().for_each(|row| {
+        let key = row.1;
+        let folder = key / 200;
+        let filename = format!("/letter/{:04}/lt{:04}.bin", folder, key);
+        println!("Reading file {}...", filename);
+        if let Some(mii) = Letter::new_from_bpk1_bytes(&extdata.read_file(&filename))
+            .unwrap()
+            .sender_mii
+        {
+            doodles.insert(*row.0, mii);
+        }
+    });
+
+    println!("All done!");
 
     (friends, doodles)
 }

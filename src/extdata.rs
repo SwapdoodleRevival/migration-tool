@@ -189,8 +189,6 @@ impl Drop for ExtdataArchive {
     }
 }
 
-const TID: u64 = 0x00040000001A2D00;
-
 fn is_letter_folder(path: String) -> bool {
     path.chars().take(4).all(|c| c.is_numeric())
 }
