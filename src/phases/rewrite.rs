@@ -1,7 +1,4 @@
-use std::{
-    collections::HashMap,
-    io::Write,
-};
+use std::{collections::HashMap, io::Write};
 
 use std::io::{Cursor, Seek};
 
@@ -11,12 +8,14 @@ use libdoodle::{
     bpk1::{BPK1Blocks, BPK1File},
 };
 
-use crate::{
-    AppData, Services, extdata,
-    read::ReadExt,
-};
+use crate::extdata::ExtdataArchive;
+use crate::{AppData, Services, extdata, read::ReadExt};
 
-pub fn rewrite(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
+pub fn rewrite(
+    s: &mut Services,
+    extdata: &mut ExtdataArchive,
+    data: &mut AppData,
+) -> Result<(), ()> {
     s.top_console.clear();
     println!("The tool will now start rewriting your Swapdoodle save data.");
     println!("Reminder: THIS TOOL DOES NOT CREATE A BACKUP!!!");
@@ -34,7 +33,7 @@ pub fn rewrite(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
     }
 
     s.top_console.clear();
-    do_rewrite(&data.mapping);
+    do_rewrite(extdata, &data.mapping);
     println!("\n");
     println!("Done!!!");
     println!("Press (A) to exit");
@@ -50,11 +49,9 @@ pub fn rewrite(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
     Ok(())
 }
 
-fn do_rewrite(mapping: &HashMap<u32, u32>) {
-    let w = extdata::create_writer();
-
+fn do_rewrite(extdata: &mut ExtdataArchive, mapping: &HashMap<u32, u32>) {
     println!("Reading manage.bin...");
-    let mut manage = BPK1Blocks::new_from_bpk1_bytes(&extdata::read_manage()).unwrap();
+    let mut manage = BPK1Blocks::new_from_bpk1_bytes(&extdata.read_manage()).unwrap();
     let cominf = manage
         .iter_mut()
         .find(|k| k.name.as_bytes() == b"COMINF0")
@@ -80,13 +77,13 @@ fn do_rewrite(mapping: &HashMap<u32, u32>) {
         cursor.set_position(pos + 0x80);
     }
     println!("Rewriting manage.bin...");
-    w.write_file(
+    extdata.write_file(
         "/letter/manage.bin",
         &(BPK1Blocks::bytes_from_bpk1_blocks(manage).unwrap()),
     );
     println!("Rewrote manage.bin.");
 
-    for (_file, filename, mut letter) in extdata::read::<BPK1Blocks>() {
+    for (_file, filename, mut letter) in extdata.read::<BPK1Blocks>() {
         let common_block = match letter.iter_mut().find(|k| k.name.as_bytes() == b"COMMON1") {
             Some(k) => k,
             None => continue,
@@ -104,7 +101,7 @@ fn do_rewrite(mapping: &HashMap<u32, u32>) {
             println!("Writing a total of {} bytes", out.len());
 
             println!("Rewriting {}...", filename);
-            w.write_file(&filename, &out);
+            extdata.write_file(&filename, &out);
             println!("Rewrote {}.", filename);
         }
     }

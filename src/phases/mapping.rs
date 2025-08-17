@@ -1,6 +1,9 @@
 use ctru::prelude::{Console, KeyPad};
 
-use crate::{AppData, Remapping, Services, friend_list::MiiMap, phases::print_center};
+use crate::{
+    AppData, Remapping, Services, friend_list::MiiMap,
+    phases::print_center,
+};
 
 fn bottom_message(s: &mut Services) {
     s.bottom_console.select();

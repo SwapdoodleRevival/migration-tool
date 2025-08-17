@@ -3,15 +3,16 @@ use std::{
     io::{self, Write},
 };
 
-use ctru::prelude::KeyPad;
+use ctru::{prelude::KeyPad, services::cfgu::Region};
 use libdoodle::{blocks::miistd1::MiiData, files::letter::Letter};
 
 use crate::{
-    AppData, Services, extdata,
+    AppData, Services,
+    extdata::{self, ExtdataArchive, SwapdoodleRegion},
     friend_list::{self, MiiMap},
 };
 
-pub fn reading(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
+pub fn reading(s: &mut Services, data: &mut AppData) -> Result<ExtdataArchive, ()> {
     s.top_console.clear();
 
     println!("We will begin by reading your Friend List");
@@ -20,17 +21,19 @@ pub fn reading(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
     println!("Press (A) to begin.");
     println!();
 
+    let extdata = ExtdataArchive::open(SwapdoodleRegion::EU).unwrap();
+
     loop {
         s.process()?;
 
         if s.hid.keys_down().contains(KeyPad::A) {
-            (data.friends, data.doodles) = friendly_read_data();
-            return Ok(());
+            (data.friends, data.doodles) = friendly_read_data(&extdata);
+            return Ok(extdata);
         }
     }
 }
 
-fn friendly_read_data() -> (MiiMap, MiiMap) {
+fn friendly_read_data(extdata: &ExtdataArchive) -> (MiiMap, MiiMap) {
     print!("Reading your friend list... ");
     _ = io::stdout().flush();
 
@@ -40,7 +43,7 @@ fn friendly_read_data() -> (MiiMap, MiiMap) {
     print!("Reading your Swapdoodle extdata... ");
     _ = io::stdout().flush();
     let mut doodles = HashMap::<u32, MiiData>::new();
-    for (_file, _filename, letter) in extdata::read::<Letter>() {
+    for (_file, _filename, letter) in extdata.read::<Letter>() {
         if letter.common.sender_pid != 0
             && let Some(mii) = letter.sender_mii
         {
