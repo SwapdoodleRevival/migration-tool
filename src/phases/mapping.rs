@@ -90,7 +90,7 @@ pub fn mapping(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
             dirty = true;
         }
 
-         if s.hid.keys_down().contains(KeyPad::Y) {
+        if s.hid.keys_down().contains(KeyPad::Y) {
             break;
         }
     }
