@@ -3,7 +3,7 @@
  */
 
 use ctru_sys::{FriendInfo, FriendKey, Handle};
-use libdoodle::mii_data::MiiData;
+use libdoodle::blocks::miistd1::MiiData;
 use std::{collections::HashMap, mem};
 
 pub type MiiMap = HashMap<u32, MiiData>;
@@ -16,28 +16,15 @@ pub fn load_friend_list() -> MiiMap {
     unsafe {
         let mut frd_handle: Handle = 0;
         _ = ctru_sys::srvGetServiceHandle(&mut frd_handle as *mut _, c"frd:a".as_ptr());
-        let (friend_keys, friends, num_friends) = get_friend_info(frd_handle);
-        let me = get_my_info(frd_handle);
+        get_friend_info(&mut friend_map, frd_handle);
+        get_my_info(&mut friend_map, frd_handle);
         _ = ctru_sys::svcCloseHandle(frd_handle);
-
-        friend_map.insert(me.0, me.1);
-
-        for i in 0..num_friends {
-            let pid: u32 = friend_keys[i as usize].principalId;
-            let mii_bytes: [u8; 0x5C] = friends[i as usize]._bindgen_opaque_blob[128..220]
-                .try_into()
-                .unwrap(); // Safe: known size
-
-            if let Ok(mii) = MiiData::from_bytes(mii_bytes) {
-                friend_map.insert(pid, mii);
-            }
-        }
     }
 
     friend_map
 }
 
-unsafe fn get_friend_info(handle: Handle) -> ([FriendKey; 100], [FriendInfo; 100], u32) {
+unsafe fn get_friend_info(friend_map: &mut MiiMap, handle: Handle) {
     unsafe {
         let mut num_friends = 0u32;
         let mut friend_keys: [FriendKey; 100] = mem::zeroed();
@@ -78,11 +65,20 @@ unsafe fn get_friend_info(handle: Handle) -> ([FriendKey; 100], [FriendInfo; 100
             panic!("Something went wrong")
         }
 
-        (friend_keys.clone(), friend_info, num_friends)
+        for i in 0..num_friends {
+            let pid: u32 = friend_keys[i as usize].principalId;
+            let mii_bytes: [u8; 0x5C] = friend_info[i as usize]._bindgen_opaque_blob[128..220]
+                .try_into()
+                .unwrap(); // Safe: known size
+
+            if let Ok(mii) = MiiData::from_bytes(mii_bytes) {
+                friend_map.insert(pid, mii);
+            }
+        }
     }
 }
 
-unsafe fn get_my_info(handle: Handle) -> (u32, MiiData) {
+unsafe fn get_my_info(friend_map: &mut MiiMap, handle: Handle) {
     unsafe {
         let cmdbuf = ctru_sys::getThreadCommandBuffer();
         *cmdbuf = 0x00050000;
@@ -110,6 +106,6 @@ unsafe fn get_my_info(handle: Handle) -> (u32, MiiData) {
             }
         }
 
-        (pid, MiiData::from_bytes(mii).unwrap())
+        friend_map.insert(pid, MiiData::from_bytes(mii).unwrap());
     }
 }

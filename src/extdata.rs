@@ -2,11 +2,14 @@ use std::{mem, os::raw::c_void, u32};
 
 use ctru_sys::{
     self, FS_Archive, FS_DirectoryEntry, FS_MediaType, FS_Path, FSDIR_Close, FSDIR_Read,
-    FSFILE_Close, FSFILE_Read, FSFILE_Write, FSUSER_OpenArchive, FSUSER_OpenDirectory,
-    FSUSER_OpenFile, Handle, MEDIATYPE_SD, PATH_BINARY, PATH_UTF16, R_FAILED, R_SUCCEEDED,
-    fsMakePath,
+    FSFILE_Close, FSFILE_Read, FSFILE_Write, FSUSER_CreateFile, FSUSER_DeleteFile,
+    FSUSER_OpenArchive, FSUSER_OpenDirectory, FSUSER_OpenFile, Handle, MEDIATYPE_SD, PATH_BINARY,
+    PATH_UTF16, R_FAILED, R_SUCCEEDED, fsMakePath,
 };
-use libdoodle::bpk1::{BPK1File, letter::Letter};
+use libdoodle::{
+    bpk1::{BPK1Blocks, BPK1File},
+    files::letter::Letter,
+};
 
 macro_rules! handle_error {
     ($res: expr) => {
@@ -17,7 +20,13 @@ macro_rules! handle_error {
     };
 }
 
-pub fn read() -> impl Iterator<Item = (FS_DirectoryEntry, String, Letter)> {
+pub fn read_manage() -> Vec<u8> {
+    // TODO: Close this archive
+    let extdata_handle: FS_Archive = open_title_extdata(MEDIATYPE_SD, 0x00040000001A2E00).unwrap();
+    read_file(extdata_handle, "/letter/manage.bin")
+}
+
+pub fn read<T: BPK1File>() -> impl Iterator<Item = (FS_DirectoryEntry, String, T)> {
     // TODO: Close this archive
     let extdata_handle: FS_Archive = open_title_extdata(MEDIATYPE_SD, 0x00040000001A2E00).unwrap();
 
@@ -35,7 +44,7 @@ pub fn read() -> impl Iterator<Item = (FS_DirectoryEntry, String, Letter)> {
             let file_name = string_from_filename(&entry.name);
             let file_path = format!("{}/{}", path, file_name);
             let file = read_file(extdata_handle, &file_path);
-            let letter = Letter::new_from_bpk1_bytes(&file).unwrap();
+            let letter = T::new_from_bpk1_bytes(&file).unwrap();
             (entry, file_path, letter)
         })
 }
@@ -58,23 +67,24 @@ pub struct FileWriter {
 }
 
 impl FileWriter {
-    fn write_file(&self, path: String, data: &Vec<u8>) {
+    pub fn write_file(&self, path: &str, data: &Vec<u8>) {
         unsafe {
             let mut handle: Handle = mem::zeroed();
             let mut path: Vec<u16> = path.encode_utf16().collect();
             path.push(0);
+
+            let path = fsMakePath(PATH_UTF16, path.as_ptr() as *const c_void);
+
+            handle_error!(FSUSER_DeleteFile(self.archive, path));
+
+            handle_error!(FSUSER_CreateFile(self.archive, path, 0, data.len() as u64));
+
             handle_error!(FSUSER_OpenFile(
                 &mut handle as *mut _,
                 self.archive,
-                fsMakePath(PATH_UTF16, path.as_ptr() as *const c_void),
+                path,
                 OpenFlags::Write as u32,
-                FileAttributes {
-                    is_directory: false,
-                    is_hidden: false,
-                    is_archive: false,
-                    readonly: true
-                }
-                .into()
+                0
             ));
 
             let mut written: u32 = 0;
@@ -93,7 +103,7 @@ impl FileWriter {
     }
 }
 
-pub fn create_writer(path: String, data: &Vec<u8>) -> FileWriter {
+pub fn create_writer() -> FileWriter {
     let extdata_handle: FS_Archive = open_title_extdata(MEDIATYPE_SD, 0x00040000001A2E00).unwrap();
     FileWriter {
         archive: extdata_handle,

@@ -4,7 +4,7 @@ use std::{
 };
 
 use ctru::prelude::KeyPad;
-use libdoodle::mii_data::MiiData;
+use libdoodle::{blocks::miistd1::MiiData, files::letter::Letter};
 
 use crate::{
     AppData, Services, extdata,
@@ -41,13 +41,14 @@ pub fn intro(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
 fn friendly_read_data() -> (MiiMap, MiiMap) {
     print!("Reading your friend list... ");
     _ = io::stdout().flush();
+
     let friends = friend_list::load_friend_list();
     println!("done!");
 
     print!("Reading your Swapdoodle extdata... ");
     _ = io::stdout().flush();
     let mut doodles = HashMap::<u32, MiiData>::new();
-    for (_file, _filename, letter) in extdata::read() {
+    for (_file, _filename, letter) in extdata::read::<Letter>() {
         if letter.common.sender_pid != 0
             && let Some(mii) = letter.sender_mii
         {

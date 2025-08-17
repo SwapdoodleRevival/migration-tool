@@ -89,7 +89,13 @@ pub fn mapping(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
             println!("\x1b[0m");
             dirty = true;
         }
+
+         if s.hid.keys_down().contains(KeyPad::Y) {
+            break;
+        }
     }
+
+    Ok(())
 }
 
 fn auto_match_by_mac(data: &mut AppData) {

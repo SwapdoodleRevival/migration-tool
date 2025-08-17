@@ -1,17 +1,12 @@
-use std::{
-    collections::HashMap,
-    io::{self, Write},
-};
+use std::collections::HashMap;
 
 use ctru::prelude::*;
-use extdata::create_writer;
 use friend_list::MiiMap;
-use libdoodle::mii_data::MiiData;
 
 mod extdata;
 mod friend_list;
 mod phases;
-pub mod menu;
+mod read;
 
 //                       .- PID of note sender
 //                       v      .- PID of friend
@@ -73,5 +68,6 @@ fn run() -> Result<(), ()> {
 
     phases::intro(&mut services, &mut data)?;
     phases::mapping(&mut services, &mut data)?;
+    phases::rewrite(&mut services, &mut data)?;
     Ok(())
 }
