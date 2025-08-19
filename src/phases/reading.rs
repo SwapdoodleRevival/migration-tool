@@ -23,19 +23,149 @@ pub fn reading(s: &mut Services, data: &mut AppData) -> Result<ExtdataArchive, (
     println!("We will begin by reading your Friend List");
     println!("and Swapdoodle extdata.");
     println!();
-    println!("Press (A) to begin.");
-    println!();
 
-    let extdata = ExtdataArchive::open(SwapdoodleRegion::EU).unwrap();
+    let extdatas = (
+        ExtdataArchive::open(SwapdoodleRegion::EU),
+        ExtdataArchive::open(SwapdoodleRegion::US),
+        ExtdataArchive::open(SwapdoodleRegion::JP),
+    );
 
-    loop {
-        s.process()?;
+    let available: u8 = if extdatas.0.is_ok() { 1 } else { 0 }
+        + if extdatas.1.is_ok().into() { 1 } else { 0 }
+        + if extdatas.2.is_ok().into() { 1 } else { 0 };
 
-        if s.hid.keys_down().contains(KeyPad::A) {
-            (data.friends, data.doodles) = friendly_read_data(&extdata);
-            return Ok(extdata);
+    if available == 0 {
+        println!("It appears you do not have any Swapdoodle extdata.");
+        println!("If you believe this is in error, please let us know!");
+        println!();
+        println!("Press (A) to exit");
+
+        loop {
+            s.process()?;
+
+            if s.hid.keys_down().contains(KeyPad::A) {
+                return Err(());
+            }
         }
     }
+
+    let extdata;
+
+    if available == 1 {
+        extdata = extdatas
+            .0
+            .unwrap_or_else(|_| extdatas.1.unwrap_or_else(|_| extdatas.2.unwrap()));
+        println!(
+            "Detected region: {}",
+            match extdata.region {
+                SwapdoodleRegion::EU => "EU",
+                SwapdoodleRegion::US => "US",
+                SwapdoodleRegion::JP => "JP",
+            }
+        );
+        println!();
+        println!("Press (A) to begin reading.");
+
+        loop {
+            s.process()?;
+
+            if s.hid.keys_down().contains(KeyPad::A) {
+                break;
+            }
+        }
+    } else {
+        println!("Detected several regions.");
+        println!("This tool can only work at one at a time.");
+        println!("Please select a region:\n");
+
+        match extdatas.0 {
+            Ok(_) => println!("(X) EU"),
+            Err(_) => {}
+        };
+        match extdatas.1 {
+            Ok(_) => println!("(Y) US"),
+            Err(_) => {}
+        };
+        match extdatas.2 {
+            Ok(_) => println!("(B) JP"),
+            Err(_) => {}
+        };
+
+        loop {
+            s.process()?;
+
+            if s.hid.keys_down().contains(KeyPad::X) {
+                match extdatas.0 {
+                    Ok(e) => {
+                        extdata = e;
+                        break;
+                    }
+                    Err(_) => {}
+                };
+            }
+            if s.hid.keys_down().contains(KeyPad::Y) {
+                match extdatas.1 {
+                    Ok(e) => {
+                        extdata = e;
+                        break;
+                    }
+                    Err(_) => {}
+                };
+            }
+            if s.hid.keys_down().contains(KeyPad::B) {
+                match extdatas.2 {
+                    Ok(e) => {
+                        extdata = e;
+                        break;
+                    }
+                    Err(_) => {}
+                };
+            }
+        }
+    }
+
+    (data.friends, data.doodles) = friendly_read_data(&extdata);
+
+    if data.friends.len() == 1 {
+        println!("Your friend list is empty.");
+        println!();
+        println!("Swapdoodle notes are tied to friend data.");
+        println!("I hope this doesn't sound rude, but here goes:");
+        println!("If you don't have friends, there is not much we can do.");
+        println!();
+        println!("Feel free to re-run this tool later!");
+        println!();
+        println!("If you believe this is in error, please let us know!");
+        println!();
+        println!("Press (A) to exit.");
+
+        loop {
+            s.process()?;
+
+            if s.hid.keys_down().contains(KeyPad::A) {
+                return Err(());
+            }
+        }
+    }
+
+    if data.doodles.is_empty() {
+        println!("We didn't find any notes from an unknown sender.");
+        println!("You shouldn't need to run this tool.");
+        println!();
+        println!("If you believe this is in error, please let us know!");
+        println!();
+        println!("Press (A) to exit.");
+
+        loop {
+            s.process()?;
+
+            if s.hid.keys_down().contains(KeyPad::A) {
+                return Err(());
+            }
+        }
+    }
+
+    return Ok(extdata);
 }
 
 fn friendly_read_data(extdata: &ExtdataArchive) -> (MiiMap, MiiMap) {
@@ -80,11 +210,8 @@ fn friendly_read_data(extdata: &ExtdataArchive) -> (MiiMap, MiiMap) {
     let mut doodles = HashMap::<u32, MiiData>::new();
 
     unknown_pids.iter().for_each(|row| {
-        let key = row.1;
-        let folder = key / 200;
-        let filename = format!("/letter/{:04}/lt{:04}.bin", folder, key);
-        println!("Reading file {}...", filename);
-        if let Some(mii) = Letter::new_from_bpk1_bytes(&extdata.read_file(&filename))
+        let key = *row.1;
+        if let Some(mii) = Letter::new_from_bpk1_bytes(&extdata.read_letter_index(key))
             .unwrap()
             .sender_mii
         {

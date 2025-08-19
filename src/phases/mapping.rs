@@ -209,18 +209,15 @@ fn print_mapping_picker(
             continue;
         }
 
-        let mut friend_name: String = String::from("<don't map>");
-
-        if let Some(friend_pid) = mapping.get(pid) {
-            friend_name = friends.get(friend_pid).unwrap().mii_name.clone()
-        }
-
         println!(
             "{} {} {: <23}{: >23} {}",
             if index == hover { "\x1b[37;44m" } else { "" },
             if index == hover { '>' } else { ' ' },
-            mii.mii_name,
-            friend_name,
+            mii.mii_name.replace(|k| !char::is_ascii(&k), "?"),
+            match mapping.get(pid) {
+                Some(friend_pid) => &friends.get(friend_pid).unwrap().mii_name.replace(|k| !char::is_ascii(&k), "?"),
+                None => "<don't map>",
+            },
             if index == hover { "\x1b[0m" } else { "" },
         );
 
@@ -249,7 +246,7 @@ fn print_friend_picker(data: &AppData, hover: usize) {
             "{} {} {: <37}{}",
             if index == hover { "\x1b[37;44m" } else { "" },
             if index == hover { '>' } else { ' ' },
-            mii.mii_name,
+            &mii.mii_name.replace(|k| !char::is_ascii(&k), "?"),
             if index == hover { "\x1b[0m" } else { "" },
         );
         line += 1;

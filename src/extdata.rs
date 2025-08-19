@@ -24,6 +24,7 @@ pub enum SwapdoodleRegion {
 }
 
 pub struct ExtdataArchive {
+    pub region: SwapdoodleRegion,
     pub archive: FS_Archive,
 }
 
@@ -50,6 +51,7 @@ impl ExtdataArchive {
                 },
             )) {
                 true => Ok(ExtdataArchive {
+                    region: region,
                     archive: extdata_handle,
                 }),
                 false => Err(()),
@@ -143,15 +145,29 @@ impl ExtdataArchive {
         }
     }
 
+    fn filename_from_key(key: u32) -> String {
+        let folder = key / 200;
+        format!("/letter/{:04}/lt{:04}.bin", folder, key)
+    }
+
+    pub fn read_letter_index(&self, key: u32) -> Vec<u8> {
+        let filename = ExtdataArchive::filename_from_key(key);
+        println!("Reading {}...", filename);
+        self.read_file(&filename)
+    }
+
+    pub fn write_letter_index(&self, key: u32, data: &[u8]) {
+        let filename = ExtdataArchive::filename_from_key(key);
+        println!("Writing {}...", filename);
+        self.write_file(&filename, data)
+    }
+
     pub fn read_manage(&self) -> Vec<u8> {
         self.read_file("/letter/manage.bin")
     }
 
     pub fn read<T: BPK1File>(&self) -> impl Iterator<Item = (FS_DirectoryEntry, String, T)> {
         self.list_dir("/letter")
-            // I think I've read somewhere that it does this?
-            // Notes are distributed among folders, so 0000, 0001...
-            // Don't have that many notes to prove it, but better safe then sorry
             .filter(|(_path, dir)| is_letter_folder(string_from_filename(&dir.name)))
             .flat_map(move |(_path, dir)| {
                 let directory = format!("/letter/{}", string_from_filename(&dir.name));
@@ -176,7 +192,10 @@ impl ExtdataArchive {
                 self.archive,
                 fsMakePath(PATH_UTF16, path_utf16.as_ptr() as *const c_void),
             ));
-            DirectoryIterator { path: path.to_string(), handle }
+            DirectoryIterator {
+                path: path.to_string(),
+                handle,
+            }
         }
     }
 }
