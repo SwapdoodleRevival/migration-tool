@@ -1,7 +1,9 @@
 use std::{ffi::CStr, mem};
 
 use citro2d_sys::{
-    C2D_CreateScreenTarget, C2D_Init, C2D_Prepare, C2D_Text, C2D_TextBuf, C2D_TextBufDelete, C2D_TextBufNew, C2D_TextOptimize, C2D_TextParse, C3D_RenderTarget, C2D_DEFAULT_MAX_OBJECTS
+    C2D_CreateScreenTarget, C2D_DEFAULT_MAX_OBJECTS, C2D_DrawText, C2D_Init, C2D_Prepare, C2D_Text,
+    C2D_TextBuf, C2D_TextBufDelete, C2D_TextBufNew, C2D_TextOptimize, C2D_TextParse,
+    C3D_RenderTarget,
 };
 use citro3d_sys::{C3D_DEFAULT_CMDBUF_SIZE, C3D_Init};
 use ctru::{GFX_BOTTOM, GFX_LEFT, GFX_TOP};
@@ -25,15 +27,6 @@ impl GUI {
             Self { screen }
         }
     }
-
-    pub fn make_static_text(textbuf: C2D_TextBuf, content: &CStr) -> C2D_Text {
-        unsafe {
-            let mut text: C2D_Text = mem::zeroed();
-            C2D_TextParse(&mut text as *mut _, textbuf, content.as_ptr());
-            C2D_TextOptimize(&mut text as *mut _);
-            text
-        }
-    }
 }
 
 pub struct TextBuffer {
@@ -55,6 +48,21 @@ impl TextBuffer {
             C2D_TextParse(&mut text as *mut _, self.buf, content.as_ptr());
             C2D_TextOptimize(&mut text as *mut _);
             text
+        }
+    }
+
+    pub fn draw(text: &C2D_Text, x: f32, y: f32, flags: u8, color: u32, scale: f32) {
+        unsafe {
+            C2D_DrawText(
+                text as *const _,
+                flags as u32,
+                x,
+                y,
+                0.0,
+                scale,
+                scale,
+                color,
+            );
         }
     }
 }

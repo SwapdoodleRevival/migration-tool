@@ -4,19 +4,16 @@ use std::{
     mem,
 };
 
-use citro2d_sys::{
-    C2D_AlignCenter, C2D_AtBaseline, C2D_Color32, C2D_DrawRectSolid, C2D_DrawText, C2D_SceneBegin,
-    C2D_TargetClear, C2D_Text, C2D_TextBuf, C2D_TextBufDelete, C2D_TextBufNew, C2D_TextOptimize,
-    C2D_TextParse, C2D_WithColor,
-};
-use citro3d_sys::{C3D_FRAME_SYNCDRAW, C3D_FrameBegin, C3D_FrameEnd};
-use ctru::prelude::KeyPad;
-use libdoodle::{blocks::miistd1::MiiData, files::letter::Letter};
-
 use crate::{
     AppData, Services,
     gui::{GUI, TOP_SCREEN_WIDTH, TextBuffer},
 };
+use citro2d_sys::{
+    C2D_AlignCenter, C2D_AtBaseline, C2D_Color32, C2D_DrawRectSolid, C2D_SceneBegin,
+    C2D_TargetClear, C2D_Text, C2D_TextBuf, C2D_TextBufDelete, C2D_TextOptimize, C2D_WithColor,
+};
+use citro3d_sys::{C3D_FRAME_SYNCDRAW, C3D_FrameBegin, C3D_FrameEnd};
+use ctru::prelude::KeyPad;
 
 pub fn intro(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
     let scene = Scene::make(s.gui);
@@ -91,117 +88,95 @@ impl<'a> Scene<'a> {
             C2D_SceneBegin(self.gui.screen);
             let bg = C2D_Color32(0, 40, 199, 255);
             C2D_DrawRectSolid(0.0, 0.0, 0.0, TOP_SCREEN_WIDTH, 30.0, bg);
-            C2D_DrawText(
-                &self.header_text as *const _,
-                (C2D_WithColor | C2D_AlignCenter | C2D_AtBaseline) as u32,
+            TextBuffer::draw(
+                &self.header_text,
                 TOP_SCREEN_WIDTH / 2.0,
                 22.0,
-                0.0,
-                0.7,
-                0.7,
+                C2D_WithColor | C2D_AlignCenter | C2D_AtBaseline,
                 self.white,
+                0.7,
             );
-            C2D_DrawText(
-                &self.intro_line1_text as *const _,
-                (C2D_WithColor) as u32,
+            TextBuffer::draw(
+                &self.intro_line1_text,
                 10.0,
                 40.0,
-                0.0,
-                0.5,
-                0.5,
+                C2D_WithColor,
                 self.white,
+                0.5,
             );
-            C2D_DrawText(
-                &self.intro_line2_text as *const _,
-                (C2D_WithColor) as u32,
+            TextBuffer::draw(
+                &self.intro_line2_text,
                 10.0,
                 55.0,
-                0.0,
-                0.5,
-                0.5,
+                C2D_WithColor,
                 self.white,
+                0.5,
             );
-            C2D_DrawText(
-                &self.goal_line1_text as *const _,
-                (C2D_WithColor) as u32,
+            TextBuffer::draw(
+                &self.goal_line1_text,
                 10.0,
                 80.0,
-                0.0,
-                0.5,
-                0.5,
+                C2D_WithColor,
                 self.white,
+                0.5,
             );
-            C2D_DrawText(
-                &self.goal_line2_text as *const _,
-                (C2D_WithColor) as u32,
+            TextBuffer::draw(
+                &self.goal_line2_text,
                 10.0,
                 95.0,
-                0.0,
-                0.5,
-                0.5,
+                C2D_WithColor,
                 self.white,
+                0.5,
             );
 
-            C2D_DrawText(
-                &self.nobkp_line1_text as *const _,
-                (C2D_WithColor) as u32,
+            TextBuffer::draw(
+                &self.nobkp_line1_text,
                 10.0,
                 120.0,
-                0.0,
-                0.4,
-                0.4,
+                C2D_WithColor,
                 self.red,
+                0.4,
             );
-            C2D_DrawText(
-                &self.nobkp_line2_text as *const _,
-                (C2D_WithColor) as u32,
+            TextBuffer::draw(
+                &self.nobkp_line2_text,
                 10.0,
                 130.0,
-                0.0,
-                0.4,
-                0.4,
+                C2D_WithColor,
                 self.red,
+                0.4,
             );
-            C2D_DrawText(
-                &self.nobkp_line3_text as *const _,
-                (C2D_WithColor) as u32,
+            TextBuffer::draw(
+                &self.nobkp_line3_text,
                 10.0,
                 140.0,
-                0.0,
-                0.4,
-                0.4,
+                C2D_WithColor,
                 self.red,
+                0.4,
             );
 
-            C2D_DrawText(
-                &self.begin as *const _,
-                (C2D_WithColor | C2D_AlignCenter) as u32,
+            TextBuffer::draw(
+                &self.begin,
                 TOP_SCREEN_WIDTH / 2.0,
                 160.0,
-                0.0,
-                0.7,
-                0.7,
+                C2D_WithColor | C2D_AlignCenter,
                 self.white,
+                0.7,
             );
-            C2D_DrawText(
-                &self.exit as *const _,
-                (C2D_WithColor | C2D_AlignCenter) as u32,
+            TextBuffer::draw(
+                &self.exit,
                 TOP_SCREEN_WIDTH / 2.0,
                 190.0,
-                0.0,
-                0.7,
-                0.7,
+                C2D_WithColor | C2D_AlignCenter,
                 self.white,
+                0.7,
             );
-            C2D_DrawText(
-                &self.exit_anytime as *const _,
-                (C2D_WithColor | C2D_AlignCenter) as u32,
+            TextBuffer::draw(
+                &self.exit_anytime,
                 TOP_SCREEN_WIDTH / 2.0,
                 210.0,
-                0.0,
-                0.5,
-                0.5,
+                C2D_WithColor | C2D_AlignCenter,
                 self.white,
+                0.5,
             );
 
             C3D_FrameEnd(0);

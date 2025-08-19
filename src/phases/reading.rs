@@ -265,92 +265,60 @@ impl<'a> Scene<'a> {
             C2D_TargetClear(self.gui.screen, C2D_Color32(20, 20, 20, 255));
             C2D_SceneBegin(self.gui.screen);
             C2D_DrawRectSolid(0.0, 0.0, 0.0, TOP_SCREEN_WIDTH, 30.0, self.blue);
-            C2D_DrawText(
-                &self.header_text as *const _,
-                (C2D_WithColor | C2D_AlignCenter | C2D_AtBaseline) as u32,
+            TextBuffer::draw(
+                &self.header_text,
                 TOP_SCREEN_WIDTH / 2.0,
                 22.0,
-                0.0,
-                0.7,
-                0.7,
+                C2D_WithColor | C2D_AlignCenter | C2D_AtBaseline,
                 self.white,
+                0.7,
             );
         }
     }
 
     pub fn paint_no_extdata(&self) {
-        unsafe {
-            C2D_DrawText(
-                &self.no_extdata as *const _,
-                (C2D_WithColor) as u32,
-                10.0,
-                40.0,
-                0.0,
-                0.5,
-                0.5,
-                self.white,
-            );
-            C2D_DrawText(
-                &self.error_lmk as *const _,
-                (C2D_WithColor) as u32,
-                10.0,
-                55.0,
-                0.0,
-                0.5,
-                0.5,
-                self.white,
-            );
-            C2D_DrawText(
-                &self.exit as *const _,
-                (C2D_WithColor | C2D_AlignCenter) as u32,
-                TOP_SCREEN_WIDTH / 2.0,
-                80.0,
-                0.0,
-                0.7,
-                0.7,
-                self.white,
-            );
-        }
+        TextBuffer::draw(&self.no_extdata, 10.0, 40.0, C2D_WithColor, self.white, 0.5);
+        TextBuffer::draw(&self.error_lmk, 10.0, 55.0, C2D_WithColor, self.white, 0.5);
+        TextBuffer::draw(
+            &self.exit,
+            TOP_SCREEN_WIDTH / 2.0,
+            80.0,
+            C2D_WithColor | C2D_AlignCenter,
+            self.white,
+            0.7,
+        );
     }
 
     pub fn paint_single_extdata(&self, region: &SwapdoodleRegion) {
-        unsafe {
-            C2D_DrawText(
-                &self.detected_one_reg as *const _,
-                (C2D_WithColor) as u32,
-                10.0,
-                40.0,
-                0.0,
-                0.5,
-                0.5,
-                self.white,
-            );
-            C2D_DrawText(
-                match region {
-                    SwapdoodleRegion::EU => &self.reg_eu as *const _,
-                    SwapdoodleRegion::US => &self.reg_us as *const _,
-                    SwapdoodleRegion::JP => &self.reg_jp as *const _,
-                },
-                (C2D_WithColor) as u32,
-                10.0,
-                60.0,
-                0.0,
-                0.7,
-                0.7,
-                self.white,
-            );
+        TextBuffer::draw(
+            &self.detected_one_reg,
+            10.0,
+            40.0,
+            C2D_WithColor,
+            self.white,
+            0.5,
+        );
+        TextBuffer::draw(
+            match region {
+                SwapdoodleRegion::EU => &self.reg_eu,
+                SwapdoodleRegion::US => &self.reg_us,
+                SwapdoodleRegion::JP => &self.reg_jp,
+            },
+            10.0,
+            60.0,
+            C2D_WithColor,
+            self.white,
+            0.7,
+        );
 
-            C2D_DrawText(
-                &self.begin_reading as *const _,
-                (C2D_WithColor | C2D_AlignCenter) as u32,
-                TOP_SCREEN_WIDTH / 2.0,
-                90.0,
-                0.0,
-                0.7,
-                0.7,
-                self.white,
-            );
-        }
+        TextBuffer::draw(
+            &self.begin_reading,
+            TOP_SCREEN_WIDTH / 2.0,
+            90.0,
+            C2D_WithColor | C2D_AlignCenter,
+            self.white,
+            0.7,
+        );
     }
 
     pub fn end_paint(&self) {
@@ -367,123 +335,61 @@ impl<'a> Scene<'a> {
             Result<ExtdataArchive, ()>,
         ),
     ) {
-        unsafe {
-            C2D_DrawText(
-                &self.detected_more_reg as *const _,
-                (C2D_WithColor) as u32,
-                10.0,
-                40.0,
-                0.0,
-                0.5,
-                0.5,
-                self.white,
-            );
+        TextBuffer::draw(
+            &self.detected_more_reg,
+            10.0,
+            40.0,
+            C2D_WithColor,
+            self.white,
+            0.5,
+        );
 
-            C2D_DrawText(
-                &self.detected_more_reg_line1 as *const _,
-                (C2D_WithColor) as u32,
-                10.0,
-                55.0,
-                0.0,
-                0.5,
-                0.5,
-                self.white,
-            );
+        TextBuffer::draw(
+            &self.detected_more_reg_line1,
+            10.0,
+            55.0,
+            C2D_WithColor,
+            self.white,
+            0.5,
+        );
 
-            C2D_DrawText(
-                &self.detected_more_reg_line2 as *const _,
-                (C2D_WithColor) as u32,
-                10.0,
-                70.0,
-                0.0,
-                0.5,
-                0.5,
-                self.white,
-            );
+        TextBuffer::draw(
+            &self.detected_more_reg_line2,
+            10.0,
+            70.0,
+            C2D_WithColor,
+            self.white,
+            0.5,
+        );
 
-            let mut y: f32 = 90.0;
+        let mut y: f32 = 90.0;
 
-            match extdatas.0 {
-                Ok(_) => {
-                    C2D_DrawText(
-                        &self.btn_eu as *const _,
-                        (C2D_WithColor) as u32,
-                        10.0,
-                        y,
-                        0.0,
-                        0.7,
-                        0.7,
-                        self.white,
-                    );
-                    C2D_DrawText(
-                        &self.reg_eu as *const _,
-                        (C2D_WithColor) as u32,
-                        30.0,
-                        y,
-                        0.0,
-                        0.7,
-                        0.7,
-                        self.white,
-                    );
+        match extdatas.0 {
+            Ok(_) => {
+                TextBuffer::draw(&self.btn_eu, 10.0, y, C2D_WithColor, self.white, 0.7);
+                TextBuffer::draw(&self.reg_eu, 30.0, y, C2D_WithColor, self.white, 0.7);
 
-                    y += 30.0;
-                }
-                Err(_) => {}
-            };
-            match extdatas.1 {
-                Ok(_) => {
-                    C2D_DrawText(
-                        &self.btn_us as *const _,
-                        (C2D_WithColor) as u32,
-                        10.0,
-                        y,
-                        0.0,
-                        0.7,
-                        0.7,
-                        self.white,
-                    );
-                    C2D_DrawText(
-                        &self.reg_us as *const _,
-                        (C2D_WithColor) as u32,
-                        30.0,
-                        y,
-                        0.0,
-                        0.7,
-                        0.7,
-                        self.white,
-                    );
+                y += 30.0;
+            }
+            Err(_) => {}
+        };
+        match extdatas.1 {
+            Ok(_) => {
+                TextBuffer::draw(&self.btn_us, 10.0, y, C2D_WithColor, self.white, 0.7);
+                TextBuffer::draw(&self.reg_us, 30.0, y, C2D_WithColor, self.white, 0.7);
 
-                    y += 30.0;
-                }
-                Err(_) => {}
-            };
-            match extdatas.2 {
-                Ok(_) => {
-                    C2D_DrawText(
-                        &self.btn_jp as *const _,
-                        (C2D_WithColor) as u32,
-                        10.0,
-                        y,
-                        0.0,
-                        0.7,
-                        0.7,
-                        self.white,
-                    );
-                    C2D_DrawText(
-                        &self.reg_jp as *const _,
-                        (C2D_WithColor) as u32,
-                        30.0,
-                        y,
-                        0.0,
-                        0.7,
-                        0.7,
-                        self.white,
-                    );
+                y += 30.0;
+            }
+            Err(_) => {}
+        };
+        match extdatas.2 {
+            Ok(_) => {
+                TextBuffer::draw(&self.btn_jp, 10.0, y, C2D_WithColor, self.white, 0.7);
+                TextBuffer::draw(&self.reg_jp, 30.0, y, C2D_WithColor, self.white, 0.7);
 
-                    y += 30.0;
-                }
-                Err(_) => {}
-            };
-        }
+                y += 30.0;
+            }
+            Err(_) => {}
+        };
     }
 }
