@@ -49,6 +49,30 @@ checksum = "ace50bade8e6234aa140d9a2f552bbee1db4d353f69b8217bc503490fc1a9f26"
 
 [[package]]
 name = "bindgen"
+version = "0.68.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "726e4313eb6ec35d2730258ad4e15b547ee75d6afaa1361a922e78e59b7d8078"
+dependencies = [
+ "annotate-snippets",
+ "bitflags 2.9.1",
+ "cexpr",
+ "clang-sys",
+ "lazy_static",
+ "lazycell",
+ "log",
+ "peeking_take_while",
+ "prettyplease",
+ "proc-macro2",
+ "quote",
+ "regex",
+ "rustc-hash 1.1.0",
+ "shlex",
+ "syn",
+ "which",
+]
+
+[[package]]
+name = "bindgen"
 version = "0.69.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "271383c67ccabffb7381723dea0672a673f292304fcb45c01cc648c7a8d58088"
@@ -65,10 +89,30 @@ dependencies = [
  "proc-macro2",
  "quote",
  "regex",
- "rustc-hash",
+ "rustc-hash 1.1.0",
  "shlex",
  "syn",
  "which",
+]
+
+[[package]]
+name = "bindgen"
+version = "0.71.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5f58bf3d7db68cfbac37cfc485a8d711e87e064c3d0fe0435b92f7a407f9d6b3"
+dependencies = [
+ "bitflags 2.9.1",
+ "cexpr",
+ "clang-sys",
+ "itertools 0.12.1",
+ "log",
+ "prettyplease",
+ "proc-macro2",
+ "quote",
+ "regex",
+ "rustc-hash 2.1.1",
+ "shlex",
+ "syn",
 ]
 
 [[package]]
@@ -121,6 +165,31 @@ checksum = "c469d952047f47f91b68d1cba3f10d63c11d73e4636f24f08daf0278abf01c4d"
 dependencies = [
  "num-traits",
  "serde",
+]
+
+[[package]]
+name = "citro2d-sys"
+version = "0.1.0"
+source = "git+https://github.com/fatfingers23/citro3d-rs#95875c9f1c7f1f54e1dacdc711c4d3c00e3c5e53"
+dependencies = [
+ "bindgen 0.68.1",
+ "cc",
+ "citro3d-sys",
+ "ctru-sys",
+ "doxygen-rs",
+ "libc",
+]
+
+[[package]]
+name = "citro3d-sys"
+version = "0.1.0"
+source = "git+https://github.com/fatfingers23/citro3d-rs#95875c9f1c7f1f54e1dacdc711c4d3c00e3c5e53"
+dependencies = [
+ "bindgen 0.68.1",
+ "cc",
+ "ctru-sys",
+ "doxygen-rs",
+ "libc",
 ]
 
 [[package]]
@@ -185,7 +254,7 @@ name = "ctru-sys"
 version = "0.5.0"
 source = "git+https://github.com/rust3ds/ctru-rs#2b2e0eddfb5f5e1b2190626120de99ca61e4b988"
 dependencies = [
- "bindgen",
+ "bindgen 0.69.5",
  "cc",
  "doxygen-rs",
  "itertools 0.11.0",
@@ -366,6 +435,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "42f5e15c9953c5e4ccceeb2e7382a716482c34515315f7b03532b8b4e8393d2d"
 
 [[package]]
+name = "peeking_take_while"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "19b17cddbe7ec3f8bc800887bab5e717348c95ea2ca0b1bf0837fb964dc67099"
+
+[[package]]
 name = "phf"
 version = "0.11.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -497,6 +572,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
 
 [[package]]
+name = "rustc-hash"
+version = "2.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "357703d41365b4b27c590e3ed91eabb1b663f07c4c084095e60cbed4362dff0d"
+
+[[package]]
 name = "rustix"
 version = "0.38.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -581,6 +662,9 @@ checksum = "8ea5119cdb4c55b55d432abb513a0429384878c15dde60cc77b1c99de1a95a6a"
 name = "swapdoodle-migration-tool"
 version = "0.1.0"
 dependencies = [
+ "bindgen 0.71.1",
+ "citro2d-sys",
+ "citro3d-sys",
  "ctru-rs",
  "ctru-sys",
  "libdoodle",

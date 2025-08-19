@@ -3,6 +3,11 @@ use std::{
     io::{self, Cursor, Write},
 };
 
+use citro2d_sys::{
+    C2D_AlignCenter, C2D_AtBaseline, C2D_Color32, C2D_DrawRectSolid, C2D_DrawText, C2D_SceneBegin,
+    C2D_TargetClear, C2D_Text, C2D_WithColor,
+};
+use citro3d_sys::{C3D_FRAME_SYNCDRAW, C3D_FrameBegin, C3D_FrameEnd};
 use ctru::{prelude::KeyPad, services::cfgu::Region};
 use libdoodle::{
     blocks::{common1, miistd1::MiiData},
@@ -14,15 +19,14 @@ use crate::{
     AppData, Services,
     extdata::{self, ExtdataArchive, SwapdoodleRegion},
     friend_list::{self, MiiMap},
+    gui::{GUI, TOP_SCREEN_WIDTH, TextBuffer},
     read::ReadExt,
 };
 
 pub fn reading(s: &mut Services, data: &mut AppData) -> Result<ExtdataArchive, ()> {
-    s.top_console.clear();
-
-    println!("We will begin by reading your Friend List");
-    println!("and Swapdoodle extdata.");
-    println!();
+    s.console.clear();
+    let scene = Scene::make(s.gui);
+    scene.begin_paint();
 
     let extdatas = (
         ExtdataArchive::open(SwapdoodleRegion::EU),
@@ -35,10 +39,8 @@ pub fn reading(s: &mut Services, data: &mut AppData) -> Result<ExtdataArchive, (
         + if extdatas.2.is_ok().into() { 1 } else { 0 };
 
     if available == 0 {
-        println!("It appears you do not have any Swapdoodle extdata.");
-        println!("If you believe this is in error, please let us know!");
-        println!();
-        println!("Press (A) to exit");
+        scene.paint_no_extdata();
+        scene.end_paint();
 
         loop {
             s.process()?;
@@ -55,16 +57,9 @@ pub fn reading(s: &mut Services, data: &mut AppData) -> Result<ExtdataArchive, (
         extdata = extdatas
             .0
             .unwrap_or_else(|_| extdatas.1.unwrap_or_else(|_| extdatas.2.unwrap()));
-        println!(
-            "Detected region: {}",
-            match extdata.region {
-                SwapdoodleRegion::EU => "EU",
-                SwapdoodleRegion::US => "US",
-                SwapdoodleRegion::JP => "JP",
-            }
-        );
-        println!();
-        println!("Press (A) to begin reading.");
+
+        scene.paint_single_extdata(&extdata.region);
+        scene.end_paint();
 
         loop {
             s.process()?;
@@ -74,22 +69,8 @@ pub fn reading(s: &mut Services, data: &mut AppData) -> Result<ExtdataArchive, (
             }
         }
     } else {
-        println!("Detected several regions.");
-        println!("This tool can only work at one at a time.");
-        println!("Please select a region:\n");
-
-        match extdatas.0 {
-            Ok(_) => println!("(X) EU"),
-            Err(_) => {}
-        };
-        match extdatas.1 {
-            Ok(_) => println!("(Y) US"),
-            Err(_) => {}
-        };
-        match extdatas.2 {
-            Ok(_) => println!("(B) JP"),
-            Err(_) => {}
-        };
+        scene.paint_several_extdata(&extdatas);
+        scene.end_paint();
 
         loop {
             s.process()?;
@@ -222,4 +203,287 @@ fn friendly_read_data(extdata: &ExtdataArchive) -> (MiiMap, MiiMap) {
     println!("All done!");
 
     (friends, doodles)
+}
+
+struct Scene<'a> {
+    gui: &'a GUI,
+    white: u32,
+    blue: u32,
+    textbuf: TextBuffer,
+    header_text: C2D_Text,
+    no_extdata: C2D_Text,
+    error_lmk: C2D_Text,
+    detected_one_reg: C2D_Text,
+    detected_more_reg: C2D_Text,
+    detected_more_reg_line1: C2D_Text,
+    detected_more_reg_line2: C2D_Text,
+    reg_eu: C2D_Text,
+    btn_eu: C2D_Text,
+    reg_us: C2D_Text,
+    btn_us: C2D_Text,
+    reg_jp: C2D_Text,
+    btn_jp: C2D_Text,
+    exit: C2D_Text,
+    begin_reading: C2D_Text,
+}
+
+impl<'a> Scene<'a> {
+    pub fn make(gui: &'a GUI) -> Self {
+        unsafe {
+            let textbuf = TextBuffer::init(4096);
+
+            Scene {
+                gui,
+                white: C2D_Color32(255, 255, 255, 255),
+                blue: C2D_Color32(0, 40, 199, 255),
+                header_text: textbuf.make_static_text(c"Confirm save data"),
+                no_extdata: textbuf
+                    .make_static_text(c"It appears you do not have any Swapdoodle extdata."),
+                error_lmk: textbuf
+                    .make_static_text(c"If you believe this is in error, please let us know!"),
+                exit: textbuf.make_static_text(c"Press \u{E000} to exit"),
+                begin_reading: textbuf.make_static_text(c"Press \u{E000} to begin reading."),
+                detected_one_reg: textbuf.make_static_text(c"Detected region:"),
+                detected_more_reg: textbuf.make_static_text(c"Detected several regions."),
+                detected_more_reg_line1: textbuf
+                    .make_static_text(c"This tool can only work with one at a time."),
+                detected_more_reg_line2: textbuf.make_static_text(c"Please select a region:"),
+                reg_eu: textbuf.make_static_text(c"Europe"),
+                btn_eu: textbuf.make_static_text(c"\u{E002}"),
+                reg_us: textbuf.make_static_text(c"USA"),
+                btn_us: textbuf.make_static_text(c"\u{E003}"),
+                reg_jp: textbuf.make_static_text(c"Japan"),
+                btn_jp: textbuf.make_static_text(c"\u{E001}"),
+                textbuf: textbuf,
+            }
+        }
+    }
+
+    pub fn begin_paint(&self) {
+        unsafe {
+            C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
+            C2D_TargetClear(self.gui.screen, C2D_Color32(20, 20, 20, 255));
+            C2D_SceneBegin(self.gui.screen);
+            C2D_DrawRectSolid(0.0, 0.0, 0.0, TOP_SCREEN_WIDTH, 30.0, self.blue);
+            C2D_DrawText(
+                &self.header_text as *const _,
+                (C2D_WithColor | C2D_AlignCenter | C2D_AtBaseline) as u32,
+                TOP_SCREEN_WIDTH / 2.0,
+                22.0,
+                0.0,
+                0.7,
+                0.7,
+                self.white,
+            );
+        }
+    }
+
+    pub fn paint_no_extdata(&self) {
+        unsafe {
+            C2D_DrawText(
+                &self.no_extdata as *const _,
+                (C2D_WithColor) as u32,
+                10.0,
+                40.0,
+                0.0,
+                0.5,
+                0.5,
+                self.white,
+            );
+            C2D_DrawText(
+                &self.error_lmk as *const _,
+                (C2D_WithColor) as u32,
+                10.0,
+                55.0,
+                0.0,
+                0.5,
+                0.5,
+                self.white,
+            );
+            C2D_DrawText(
+                &self.exit as *const _,
+                (C2D_WithColor | C2D_AlignCenter) as u32,
+                TOP_SCREEN_WIDTH / 2.0,
+                80.0,
+                0.0,
+                0.7,
+                0.7,
+                self.white,
+            );
+        }
+    }
+
+    pub fn paint_single_extdata(&self, region: &SwapdoodleRegion) {
+        unsafe {
+            C2D_DrawText(
+                &self.detected_one_reg as *const _,
+                (C2D_WithColor) as u32,
+                10.0,
+                40.0,
+                0.0,
+                0.5,
+                0.5,
+                self.white,
+            );
+            C2D_DrawText(
+                match region {
+                    SwapdoodleRegion::EU => &self.reg_eu as *const _,
+                    SwapdoodleRegion::US => &self.reg_us as *const _,
+                    SwapdoodleRegion::JP => &self.reg_jp as *const _,
+                },
+                (C2D_WithColor) as u32,
+                10.0,
+                60.0,
+                0.0,
+                0.7,
+                0.7,
+                self.white,
+            );
+
+            C2D_DrawText(
+                &self.begin_reading as *const _,
+                (C2D_WithColor | C2D_AlignCenter) as u32,
+                TOP_SCREEN_WIDTH / 2.0,
+                90.0,
+                0.0,
+                0.7,
+                0.7,
+                self.white,
+            );
+        }
+    }
+
+    pub fn end_paint(&self) {
+        unsafe {
+            C3D_FrameEnd(0);
+        }
+    }
+
+    fn paint_several_extdata(
+        &self,
+        extdatas: &(
+            Result<ExtdataArchive, ()>,
+            Result<ExtdataArchive, ()>,
+            Result<ExtdataArchive, ()>,
+        ),
+    ) {
+        unsafe {
+            C2D_DrawText(
+                &self.detected_more_reg as *const _,
+                (C2D_WithColor) as u32,
+                10.0,
+                40.0,
+                0.0,
+                0.5,
+                0.5,
+                self.white,
+            );
+
+            C2D_DrawText(
+                &self.detected_more_reg_line1 as *const _,
+                (C2D_WithColor) as u32,
+                10.0,
+                55.0,
+                0.0,
+                0.5,
+                0.5,
+                self.white,
+            );
+
+            C2D_DrawText(
+                &self.detected_more_reg_line2 as *const _,
+                (C2D_WithColor) as u32,
+                10.0,
+                70.0,
+                0.0,
+                0.5,
+                0.5,
+                self.white,
+            );
+
+            let mut y: f32 = 90.0;
+
+            match extdatas.0 {
+                Ok(_) => {
+                    C2D_DrawText(
+                        &self.btn_eu as *const _,
+                        (C2D_WithColor) as u32,
+                        10.0,
+                        y,
+                        0.0,
+                        0.7,
+                        0.7,
+                        self.white,
+                    );
+                    C2D_DrawText(
+                        &self.reg_eu as *const _,
+                        (C2D_WithColor) as u32,
+                        30.0,
+                        y,
+                        0.0,
+                        0.7,
+                        0.7,
+                        self.white,
+                    );
+
+                    y += 30.0;
+                }
+                Err(_) => {}
+            };
+            match extdatas.1 {
+                Ok(_) => {
+                    C2D_DrawText(
+                        &self.btn_us as *const _,
+                        (C2D_WithColor) as u32,
+                        10.0,
+                        y,
+                        0.0,
+                        0.7,
+                        0.7,
+                        self.white,
+                    );
+                    C2D_DrawText(
+                        &self.reg_us as *const _,
+                        (C2D_WithColor) as u32,
+                        30.0,
+                        y,
+                        0.0,
+                        0.7,
+                        0.7,
+                        self.white,
+                    );
+
+                    y += 30.0;
+                }
+                Err(_) => {}
+            };
+            match extdatas.2 {
+                Ok(_) => {
+                    C2D_DrawText(
+                        &self.btn_jp as *const _,
+                        (C2D_WithColor) as u32,
+                        10.0,
+                        y,
+                        0.0,
+                        0.7,
+                        0.7,
+                        self.white,
+                    );
+                    C2D_DrawText(
+                        &self.reg_jp as *const _,
+                        (C2D_WithColor) as u32,
+                        30.0,
+                        y,
+                        0.0,
+                        0.7,
+                        0.7,
+                        self.white,
+                    );
+
+                    y += 30.0;
+                }
+                Err(_) => {}
+            };
+        }
+    }
 }

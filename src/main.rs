@@ -3,8 +3,11 @@ use std::collections::HashMap;
 use ctru::prelude::*;
 use friend_list::MiiMap;
 
+use crate::gui::GUI;
+
 mod extdata;
 mod friend_list;
+mod gui;
 mod phases;
 mod read;
 
@@ -16,8 +19,8 @@ struct Services<'a> {
     apt: &'a Apt,
     hid: &'a mut Hid,
     gfx: &'a Gfx,
-    bottom_console: Console<'a>,
-    top_console: Console<'a>,
+    gui: &'a GUI,
+    console: Console<'a>,
 }
 
 impl<'a> Services<'a> {
@@ -49,15 +52,15 @@ fn run() -> Result<(), ()> {
     let apt = Apt::new().unwrap();
     let mut hid = Hid::new().unwrap();
     let gfx: Gfx = Gfx::new().unwrap();
-    let bottom_console = Console::new(gfx.bottom_screen.borrow_mut());
-    let top_console = Console::new(gfx.top_screen.borrow_mut());
+    let console = Console::new(gfx.bottom_screen.borrow_mut());
+    let gui = GUI::init();
 
     let mut services = Services {
         apt: &apt,
         gfx: &gfx,
         hid: &mut hid,
-        bottom_console,
-        top_console,
+        gui: &gui,
+        console
     };
 
     let mut data = AppData {
@@ -68,7 +71,7 @@ fn run() -> Result<(), ()> {
 
     phases::intro(&mut services, &mut data)?;
     let mut extdata = phases::reading(&mut services, &mut data)?;
-    phases::mapping(&mut services, &mut data)?;
-    phases::rewrite(&mut services, &mut extdata, &mut data)?;
+    //phases::mapping(&mut services, &mut data)?;
+    //hases::rewrite(&mut services, &mut extdata, &mut data)?;
     Ok(())
 }
