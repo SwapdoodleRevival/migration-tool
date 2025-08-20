@@ -136,9 +136,6 @@ fn pick_friend(
 
 struct Scene<'a> {
     gui: &'a GUI,
-    white: u32,
-    blue: u32,
-    overlay_shadow: u32,
     textbuf: TextBuffer,
     header_text: C2D_Text,
     explanation_line1: C2D_Text,
@@ -161,148 +158,110 @@ struct Scene<'a> {
 
 impl<'a> Scene<'a> {
     pub fn make(gui: &'a GUI, read: &ReadResult) -> Self {
-        unsafe {
-            let textbuf = TextBuffer::init(4096 * 8);
+        let textbuf = TextBuffer::init(4096 * 8);
 
-            let mut names = HashMap::<u32, C2D_Text>::new();
-            for (pid, mii) in read.doodles.iter() {
-                let s = CString::from_str(&mii.mii_name).unwrap_or_default();
-                names.insert(*pid, textbuf.make_static_text(&s));
-            }
-            for (pid, mii) in read.friends.iter() {
-                let s = CString::from_str(&mii.mii_name).unwrap_or_default();
-                names.insert(*pid, textbuf.make_static_text(&s));
-            }
+        let mut names = HashMap::<u32, C2D_Text>::new();
+        for (pid, mii) in read.doodles.iter() {
+            let s = CString::from_str(&mii.mii_name).unwrap_or_default();
+            names.insert(*pid, textbuf.make_static_text(&s));
+        }
+        for (pid, mii) in read.friends.iter() {
+            let s = CString::from_str(&mii.mii_name).unwrap_or_default();
+            names.insert(*pid, textbuf.make_static_text(&s));
+        }
 
-            Scene {
-                gui,
-                white: C2D_Color32(255, 255, 255, 255),
-                blue: C2D_Color32(0, 40, 199, 255),
-                overlay_shadow: C2D_Color32(0, 0, 0, 120),
-                header_text: textbuf.make_static_text(c"Mapping"),
-                explanation_line1: textbuf
-                    .make_static_text(c"The migration tool has attempted to automatically"),
-                explanation_line2: textbuf
-                    .make_static_text(c"match unknown Doodle authors to your friends."),
-                explanation_line3: textbuf
-                    .make_static_text(c"You can change the suggested mapping"),
-                explanation_line4: textbuf.make_static_text(c"before you begin the migration."),
-                explanation_line5: textbuf.make_static_text(c"Highlight a mapping with \u{E07D} "),
-                explanation_line6: textbuf.make_static_text(c"and press \u{E000} to change it."),
-                press_a_continue: textbuf.make_static_text(c"Press \u{E000} to continue"),
-                press_b_back: textbuf.make_static_text(c"\u{E001} Back"),
-                press_x_clear: textbuf.make_static_text(c"\u{E002} Clear"),
-                press_y_done: textbuf.make_static_text(c"\u{E003} Finish"),
-                scroll_for_more: textbuf.make_static_text(c"... scroll for more ..."),
-                dont_map: textbuf.make_static_text(c"<don't map>"),
-                remapping: textbuf.make_static_text(c"Remapping"),
-                names,
-                textbuf,
-                index: 0,
-                index_friend: 0,
-            }
+        Scene {
+            gui,
+            header_text: textbuf.make_static_text(c"Mapping"),
+            explanation_line1: textbuf
+                .make_static_text(c"The migration tool has attempted to automatically"),
+            explanation_line2: textbuf
+                .make_static_text(c"match unknown Doodle authors to your friends."),
+            explanation_line3: textbuf.make_static_text(c"You can change the suggested mapping"),
+            explanation_line4: textbuf.make_static_text(c"before you begin the migration."),
+            explanation_line5: textbuf.make_static_text(c"Highlight a mapping with \u{E07D} "),
+            explanation_line6: textbuf.make_static_text(c"and press \u{E000} to change it."),
+            press_a_continue: textbuf.make_static_text(c"Press \u{E000} to continue"),
+            press_b_back: textbuf.make_static_text(c"\u{E001} Back"),
+            press_x_clear: textbuf.make_static_text(c"\u{E002} Clear"),
+            press_y_done: textbuf.make_static_text(c"\u{E003} Finish"),
+            scroll_for_more: textbuf.make_static_text(c"... scroll for more ..."),
+            dont_map: textbuf.make_static_text(c"<don't map>"),
+            remapping: textbuf.make_static_text(c"Remapping"),
+            names,
+            textbuf,
+            index: 0,
+            index_friend: 0,
         }
     }
 
     pub fn begin_paint(&self) {
-        unsafe {
-            C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-            C2D_TargetClear(self.gui.screen, C2D_Color32(20, 20, 20, 255));
-            C2D_SceneBegin(self.gui.screen);
-            C2D_DrawRectSolid(0.0, 0.0, 0.0, TOP_SCREEN_WIDTH, 20.0, self.blue);
-            TextBuffer::draw(
-                &self.header_text,
-                TOP_SCREEN_WIDTH / 2.0,
-                15.0,
-                C2D_WithColor | C2D_AlignCenter | C2D_AtBaseline,
-                self.white,
-                0.7,
-            );
-        }
+        self.gui.begin_frame();
+        self.gui.header_small(&self.header_text);
     }
 
     pub fn dialog_explanation(&self) {
         const DIALOG_PADDING: f32 = 40.0;
-        unsafe {
-            C2D_DrawRectSolid(
-                0.0,
-                0.0,
-                0.0,
-                TOP_SCREEN_WIDTH,
-                TOP_SCREEN_HEIGHT,
-                self.overlay_shadow,
-            );
-            C2D_DrawRectSolid(
-                DIALOG_PADDING,
-                DIALOG_PADDING,
-                0.0,
-                TOP_SCREEN_WIDTH - 2.0 * DIALOG_PADDING,
-                TOP_SCREEN_HEIGHT - 2.0 * DIALOG_PADDING,
-                self.blue,
-            );
-        }
-        TextBuffer::draw(
+        self.gui.dialog();
+        self.gui.rect(
+            DIALOG_PADDING,
+            DIALOG_PADDING,
+            TOP_SCREEN_WIDTH - 2.0 * DIALOG_PADDING,
+            TOP_SCREEN_HEIGHT - 2.0 * DIALOG_PADDING,
+        );
+        self.gui.text(
             &self.explanation_line1,
             DIALOG_PADDING + 10.0,
             DIALOG_PADDING + 10.0,
-            C2D_WithColor,
-            self.white,
+            0,
             0.5,
         );
-        TextBuffer::draw(
+        self.gui.text(
             &self.explanation_line2,
             DIALOG_PADDING + 10.0,
             DIALOG_PADDING + 25.0,
-            C2D_WithColor,
-            self.white,
+            0,
             0.5,
         );
-        TextBuffer::draw(
+        self.gui.text(
             &self.explanation_line3,
             DIALOG_PADDING + 10.0,
             DIALOG_PADDING + 50.0,
-            C2D_WithColor,
-            self.white,
+            0,
             0.5,
         );
-        TextBuffer::draw(
+        self.gui.text(
             &self.explanation_line4,
             DIALOG_PADDING + 10.0,
             DIALOG_PADDING + 65.0,
-            C2D_WithColor,
-            self.white,
+            0,
             0.5,
         );
-        TextBuffer::draw(
+        self.gui.text(
             &self.explanation_line5,
             DIALOG_PADDING + 10.0,
             DIALOG_PADDING + 90.0,
-            C2D_WithColor,
-            self.white,
+            0,
             0.5,
         );
-        TextBuffer::draw(
+        self.gui.text(
             &self.explanation_line6,
             DIALOG_PADDING + 10.0,
             DIALOG_PADDING + 105.0,
-            C2D_WithColor,
-            self.white,
+            0,
             0.5,
         );
-        TextBuffer::draw(
+        self.gui.text(
             &self.press_a_continue,
             DIALOG_PADDING + 10.0,
             DIALOG_PADDING + 130.0,
-            C2D_WithColor,
-            self.white,
+            0,
             0.7,
         );
     }
 
     pub fn end_paint(&self) {
-        unsafe {
-            C3D_FrameEnd(0);
-        }
+        self.gui.end_frame();
     }
 
     pub fn down(&mut self, doodles: &MiiMap) {
@@ -348,14 +307,7 @@ impl<'a> Scene<'a> {
         let mut line: usize = 0;
         for (i, (pid, mii)) in doodles.iter().enumerate() {
             if line == PAGE_SIZE {
-                TextBuffer::draw(
-                    &self.scroll_for_more,
-                    10.0,
-                    225.0,
-                    C2D_WithColor,
-                    self.white,
-                    0.45,
-                );
+                self.gui.text(&self.scroll_for_more, 10.0, 225.0, 0, 0.45);
                 break;
             }
 
@@ -366,40 +318,30 @@ impl<'a> Scene<'a> {
             let ypos: f32 = 25.0 + line as f32 * 20.0;
 
             if i == self.index {
-                unsafe {
-                    C2D_DrawRectSolid(0.0, ypos, 0.0, TOP_SCREEN_WIDTH, 20.0, self.overlay_shadow);
-                }
+                self.gui.highlight(0.0, ypos, TOP_SCREEN_WIDTH, 20.0);
             }
 
-            TextBuffer::draw(
-                self.names.get(pid).unwrap(),
-                10.0,
-                ypos,
-                C2D_WithColor,
-                self.white,
-                0.6,
-            );
+            self.gui
+                .text(self.names.get(pid).unwrap(), 10.0, ypos, 0, 0.6);
 
-            TextBuffer::draw(
+            self.gui.text(
                 match mapping.get(pid) {
                     Some(new) => self.names.get(new).unwrap(),
                     None => &self.dont_map,
                 },
                 TOP_SCREEN_WIDTH - 10.0,
                 ypos,
-                C2D_WithColor | C2D_AlignRight,
-                self.white,
+                C2D_AlignRight,
                 0.6,
             );
 
             line += 1;
         }
-        TextBuffer::draw(
+        self.gui.text(
             &self.press_y_done,
             TOP_SCREEN_WIDTH - 10.0,
             225.0,
-            C2D_WithColor | C2D_AlignRight,
-            self.white,
+            C2D_AlignRight,
             0.5,
         );
     }
@@ -408,53 +350,35 @@ impl<'a> Scene<'a> {
         const PAGE_SIZE: usize = 10;
 
         unsafe {
-            C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-            C2D_TargetClear(self.gui.screen, C2D_Color32(20, 20, 20, 255));
-            C2D_SceneBegin(self.gui.screen);
-            C2D_DrawRectSolid(0.0, 0.0, 0.0, TOP_SCREEN_WIDTH, 20.0, self.blue);
-            TextBuffer::draw(
+            self.gui.begin_frame();
+            self.gui.rect(0.0, 0.0, TOP_SCREEN_WIDTH, 20.0);
+            self.gui.text(
                 &self.press_b_back,
                 TOP_SCREEN_WIDTH - 10.0,
                 225.0,
-                C2D_WithColor | C2D_AlignRight,
-                self.white,
+                C2D_AlignRight,
                 0.5,
             );
-            TextBuffer::draw(
+            self.gui.text(
                 &self.press_x_clear,
                 TOP_SCREEN_WIDTH - 70.0,
                 225.0,
-                C2D_WithColor | C2D_AlignRight,
-                self.white,
+                C2D_AlignRight,
                 0.5,
             );
-            TextBuffer::draw(
-                &self.remapping,
-                10.0,
-                15.0,
-                C2D_WithColor | C2D_AtBaseline,
-                self.white,
-                0.7,
-            );
-            TextBuffer::draw(
+            self.gui
+                .text(&self.remapping, 10.0, 15.0, C2D_AtBaseline, 0.7);
+            self.gui.text(
                 self.names.get(&pid).unwrap(),
                 110.0,
                 15.0,
-                C2D_WithColor | C2D_AtBaseline,
-                self.white,
+                C2D_AtBaseline,
                 0.7,
             );
             let mut line: usize = 0;
             for (i, (pid, mii)) in friends.iter().enumerate() {
                 if line == PAGE_SIZE {
-                    TextBuffer::draw(
-                        &self.scroll_for_more,
-                        10.0,
-                        225.0,
-                        C2D_WithColor,
-                        self.white,
-                        0.45,
-                    );
+                    self.gui.text(&self.scroll_for_more, 10.0, 225.0, 0, 0.45);
                     break;
                 }
 
@@ -465,17 +389,11 @@ impl<'a> Scene<'a> {
                 let ypos: f32 = 25.0 + line as f32 * 20.0;
 
                 if i == self.index_friend {
-                    C2D_DrawRectSolid(0.0, ypos, 0.0, TOP_SCREEN_WIDTH, 20.0, self.overlay_shadow);
+                    self.gui.highlight(0.0, ypos, TOP_SCREEN_WIDTH, 20.0);
                 }
 
-                TextBuffer::draw(
-                    self.names.get(pid).unwrap(),
-                    10.0,
-                    ypos,
-                    C2D_WithColor,
-                    self.white,
-                    0.6,
-                );
+                self.gui
+                    .text(self.names.get(pid).unwrap(), 10.0, ypos, 0, 0.6);
 
                 line += 1;
             }
