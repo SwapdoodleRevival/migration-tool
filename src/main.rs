@@ -50,7 +50,7 @@ fn run() -> Result<(), ()> {
         gfx: &gfx,
         hid: &mut hid,
         gui: &gui,
-        console
+        console,
     };
 
     phases::intro(&mut services)?;
