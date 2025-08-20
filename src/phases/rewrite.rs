@@ -2,6 +2,11 @@ use std::{collections::HashMap, io::Write};
 
 use std::io::{Cursor, Seek};
 
+use citro2d_sys::{
+    C2D_AlignCenter, C2D_AtBaseline, C2D_Color32, C2D_DrawRectSolid, C2D_SceneBegin,
+    C2D_TargetClear, C2D_Text, C2D_WithColor,
+};
+use citro3d_sys::{C3D_FRAME_SYNCDRAW, C3D_FrameBegin, C3D_FrameEnd};
 use ctru::prelude::KeyPad;
 use libdoodle::{
     blocks::common1,
@@ -9,21 +14,17 @@ use libdoodle::{
 };
 
 use crate::extdata::ExtdataArchive;
-use crate::{AppData, Services, extdata, read::ReadExt};
+use crate::gui::{GUI, TOP_SCREEN_HEIGHT, TOP_SCREEN_WIDTH, TextBuffer};
+use crate::phases::OldToNewPIDMapping;
+use crate::{Services, extdata, read::ReadExt};
 
 pub fn rewrite(
     s: &mut Services,
-    extdata: &mut ExtdataArchive,
-    data: &mut AppData,
+    extdata: ExtdataArchive,
+    mapping: OldToNewPIDMapping,
 ) -> Result<(), ()> {
-    s.bottom_console.clear();
-    s.top_console.clear();
-    println!("The tool will now start rewriting your Swapdoodle save data.");
-    println!("Reminder: THIS TOOL DOES NOT CREATE A BACKUP!!!");
-    println!("If you do *not* have one, DO NOT CONTINUE!!!");
-    println!();
-    println!("Press (A) to begin");
-    println!("Press (Start) to exit");
+    let scene = Scene::make(s.gui);
+    scene.paint_ready_page(); // only needed once
 
     loop {
         s.process()?;
@@ -33,11 +34,11 @@ pub fn rewrite(
         }
     }
 
-    s.top_console.clear();
-    do_rewrite(extdata, &data.mapping);
-    println!("\n");
-    println!("Done!!!");
-    println!("Press (A) to exit");
+    s.console.clear();
+    scene.paint_progess_page();
+    do_rewrite(extdata, mapping);
+
+    scene.paint_done_page();
 
     loop {
         s.process()?;
@@ -50,7 +51,7 @@ pub fn rewrite(
     Ok(())
 }
 
-fn do_rewrite(extdata: &mut ExtdataArchive, mapping: &HashMap<u32, u32>) {
+fn do_rewrite(extdata: ExtdataArchive, mapping: OldToNewPIDMapping) {
     println!("Reading manage.bin...");
     let mut manage = BPK1Blocks::new_from_bpk1_bytes(&extdata.read_manage()).unwrap();
     let cominf = manage
@@ -74,7 +75,8 @@ fn do_rewrite(extdata: &mut ExtdataArchive, mapping: &HashMap<u32, u32>) {
             cursor.set_position(pos + 24);
             cursor.write_all(&u32::to_le_bytes(*new_pid)).unwrap();
 
-            let mut letter = BPK1Blocks::new_from_bpk1_bytes(&extdata.read_letter_index(letter_key)).unwrap();
+            let mut letter =
+                BPK1Blocks::new_from_bpk1_bytes(&extdata.read_letter_index(letter_key)).unwrap();
             let common_block = match letter.iter_mut().find(|k| k.name.as_bytes() == b"COMMON1") {
                 Some(k) => k,
                 None => continue,
@@ -96,4 +98,189 @@ fn do_rewrite(extdata: &mut ExtdataArchive, mapping: &HashMap<u32, u32>) {
         &(BPK1Blocks::bytes_from_bpk1_blocks(manage).unwrap()),
     );
     println!("Rewrote manage.bin.");
+}
+
+struct Scene<'a> {
+    gui: &'a GUI,
+    white: u32,
+    red: u32,
+    textbuf: TextBuffer,
+    header_text: C2D_Text,
+    action_text: C2D_Text,
+    nobkp_line1_text: C2D_Text,
+    nobkp_line2_text: C2D_Text,
+    begin: C2D_Text,
+    no_exit: C2D_Text,
+    progress: C2D_Text,
+    progress_observe_bottom: C2D_Text,
+    header_text_finished: C2D_Text,
+    finished_line: C2D_Text,
+    exit: C2D_Text,
+    exit_a: C2D_Text,
+}
+
+impl<'a> Scene<'a> {
+    pub fn make(gui: &'a GUI) -> Self {
+        unsafe {
+            let textbuf = TextBuffer::init(4096);
+
+            Scene {
+                gui,
+                white: C2D_Color32(255, 255, 255, 255),
+                red: C2D_Color32(255, 0, 0, 255),
+                header_text: textbuf.make_static_text(c"Ready to migrate"),
+                action_text: textbuf
+                    .make_static_text(c"We can now start migrating your Swapdoodle notes."),
+                nobkp_line1_text: textbuf.make_static_text(
+                    c"Reminder: This tool does not back up your extra data before migrating!",
+                ),
+                nobkp_line2_text: textbuf
+                    .make_static_text(c"If you do not have a backup, DO NOT CONTINUE!!!"),
+                begin: textbuf.make_static_text(c"Press \u{E000} to begin"),
+                exit: textbuf.make_static_text(c"Press Start to exit"),
+                exit_a: textbuf.make_static_text(c"Press \u{E000} to exit"),
+                no_exit: textbuf
+                    .make_static_text(c"You cannot interrupt the migration once it has begun."),
+                progress: textbuf.make_static_text(c"Migrating in progress..."),
+                progress_observe_bottom: textbuf.make_static_text(c"Look at the bottom screen."),
+                header_text_finished: textbuf.make_static_text(c"Finished!"),
+                finished_line: textbuf.make_static_text(c"Your notes have been migrated."),
+                textbuf: textbuf,
+            }
+        }
+    }
+
+    pub fn paint_ready_page(&self) {
+        unsafe {
+            C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
+            C2D_TargetClear(self.gui.screen, C2D_Color32(20, 20, 20, 255));
+            C2D_SceneBegin(self.gui.screen);
+            let bg = C2D_Color32(0, 40, 199, 255);
+            C2D_DrawRectSolid(0.0, 0.0, 0.0, TOP_SCREEN_WIDTH, 30.0, bg);
+            TextBuffer::draw(
+                &self.header_text,
+                TOP_SCREEN_WIDTH / 2.0,
+                22.0,
+                C2D_WithColor | C2D_AlignCenter | C2D_AtBaseline,
+                self.white,
+                0.7,
+            );
+            TextBuffer::draw(
+                &self.action_text,
+                10.0,
+                40.0,
+                C2D_WithColor,
+                self.white,
+                0.5,
+            );
+
+            TextBuffer::draw(
+                &self.nobkp_line1_text,
+                10.0,
+                60.0,
+                C2D_WithColor,
+                self.red,
+                0.4,
+            );
+            TextBuffer::draw(
+                &self.nobkp_line2_text,
+                10.0,
+                70.0,
+                C2D_WithColor,
+                self.red,
+                0.4,
+            );
+
+            TextBuffer::draw(
+                &self.begin,
+                TOP_SCREEN_WIDTH / 2.0,
+                100.0,
+                C2D_WithColor | C2D_AlignCenter,
+                self.white,
+                0.7,
+            );
+            TextBuffer::draw(
+                &self.exit,
+                TOP_SCREEN_WIDTH / 2.0,
+                130.0,
+                C2D_WithColor | C2D_AlignCenter,
+                self.white,
+                0.7,
+            );
+            TextBuffer::draw(
+                &self.no_exit,
+                TOP_SCREEN_WIDTH / 2.0,
+                155.0,
+                C2D_WithColor | C2D_AlignCenter,
+                self.white,
+                0.5,
+            );
+
+            C3D_FrameEnd(0);
+        }
+    }
+
+    pub fn paint_progess_page(&self) {
+        unsafe {
+            C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
+            C2D_TargetClear(self.gui.screen, C2D_Color32(20, 20, 20, 255));
+            C2D_SceneBegin(self.gui.screen);
+            TextBuffer::draw(
+                &self.progress,
+                TOP_SCREEN_WIDTH / 2.0,
+                TOP_SCREEN_HEIGHT / 2.0 - 40.0,
+                C2D_WithColor | C2D_AlignCenter,
+                self.white,
+                0.7,
+            );
+            TextBuffer::draw(
+                &self.progress_observe_bottom,
+                TOP_SCREEN_WIDTH / 2.0,
+                TOP_SCREEN_HEIGHT / 2.0 + 40.0,
+                C2D_WithColor | C2D_AlignCenter,
+                self.white,
+                0.5,
+            );
+
+            C3D_FrameEnd(0);
+        }
+    }
+
+    fn paint_done_page(&self) {
+        unsafe {
+            C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
+            C2D_TargetClear(self.gui.screen, C2D_Color32(20, 20, 20, 255));
+            C2D_SceneBegin(self.gui.screen);
+            let bg = C2D_Color32(0, 40, 199, 255);
+            C2D_DrawRectSolid(0.0, 0.0, 0.0, TOP_SCREEN_WIDTH, 30.0, bg);
+            TextBuffer::draw(
+                &self.header_text_finished,
+                TOP_SCREEN_WIDTH / 2.0,
+                22.0,
+                C2D_WithColor | C2D_AlignCenter | C2D_AtBaseline,
+                self.white,
+                0.7,
+            );
+
+            TextBuffer::draw(
+                &self.finished_line,
+                10.0,
+                40.0,
+                C2D_WithColor,
+                self.white,
+                0.5,
+            );
+
+            TextBuffer::draw(
+                &self.exit_a,
+                TOP_SCREEN_WIDTH / 2.0,
+                100.0,
+                C2D_WithColor | C2D_AlignCenter,
+                self.white,
+                0.7,
+            );
+
+            C3D_FrameEnd(0);
+        }
+    }
 }

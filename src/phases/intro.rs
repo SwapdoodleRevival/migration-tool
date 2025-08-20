@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::{
-    AppData, Services,
+    Services,
     gui::{GUI, TOP_SCREEN_WIDTH, TextBuffer},
 };
 use citro2d_sys::{
@@ -15,7 +15,7 @@ use citro2d_sys::{
 use citro3d_sys::{C3D_FRAME_SYNCDRAW, C3D_FrameBegin, C3D_FrameEnd};
 use ctru::prelude::KeyPad;
 
-pub fn intro(s: &mut Services, data: &mut AppData) -> Result<(), ()> {
+pub fn intro(s: &mut Services) -> Result<(), ()> {
     let scene = Scene::make(s.gui);
     scene.paint(); // only needed once
 

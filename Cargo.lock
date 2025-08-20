@@ -43,9 +43,9 @@ dependencies = [
 
 [[package]]
 name = "autocfg"
-version = "1.4.0"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ace50bade8e6234aa140d9a2f552bbee1db4d353f69b8217bc503490fc1a9f26"
+checksum = "c08606f8c3cbf4ce6ec8e28fb0014a2c086708fe954eaa885384a6165172e7e8"
 
 [[package]]
 name = "bindgen"
@@ -350,7 +350,7 @@ checksum = "d750af042f7ef4f724306de029d18836c26c1765a54a6a3f094cbd23a7267ffa"
 [[package]]
 name = "libdoodle"
 version = "0.1.0"
-source = "git+https://github.com/SwapdoodleRevival/libdoodle.git#efae14a85c3b369214f857db2802c758c66f5572"
+source = "git+https://github.com/SwapdoodleRevival/libdoodle.git#68be90e50abc3ebc922913b77e762f23199a1b34"
 dependencies = [
  "chrono",
  "crc",

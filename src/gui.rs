@@ -14,6 +14,7 @@ pub struct GUI {
 }
 
 pub const TOP_SCREEN_WIDTH: f32 = 400.0;
+pub const TOP_SCREEN_HEIGHT: f32 = 240.0;
 
 impl GUI {
     pub fn init() -> Self {

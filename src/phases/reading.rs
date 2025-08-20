@@ -16,14 +16,19 @@ use libdoodle::{
 };
 
 use crate::{
-    AppData, Services,
+    Services,
     extdata::{self, ExtdataArchive, SwapdoodleRegion},
     friend_list::{self, MiiMap},
     gui::{GUI, TOP_SCREEN_WIDTH, TextBuffer},
     read::ReadExt,
 };
 
-pub fn reading(s: &mut Services, data: &mut AppData) -> Result<ExtdataArchive, ()> {
+pub struct ReadResult {
+    pub friends: MiiMap,
+    pub doodles: MiiMap,
+}
+
+pub fn reading(s: &mut Services) -> Result<(ExtdataArchive, ReadResult), ()> {
     s.console.clear();
     let scene = Scene::make(s.gui);
     scene.begin_paint();
@@ -105,9 +110,9 @@ pub fn reading(s: &mut Services, data: &mut AppData) -> Result<ExtdataArchive, (
         }
     }
 
-    (data.friends, data.doodles) = friendly_read_data(&extdata);
+    let (friends, doodles) = friendly_read_data(&extdata);
 
-    if data.friends.len() == 1 {
+    if friends.len() == 1 {
         println!("Your friend list is empty.");
         println!();
         println!("Swapdoodle notes are tied to friend data.");
@@ -129,7 +134,7 @@ pub fn reading(s: &mut Services, data: &mut AppData) -> Result<ExtdataArchive, (
         }
     }
 
-    if data.doodles.is_empty() {
+    if doodles.is_empty() {
         println!("We didn't find any notes from an unknown sender.");
         println!("You shouldn't need to run this tool.");
         println!();
@@ -146,7 +151,7 @@ pub fn reading(s: &mut Services, data: &mut AppData) -> Result<ExtdataArchive, (
         }
     }
 
-    return Ok(extdata);
+    return Ok((extdata, ReadResult { friends, doodles }));
 }
 
 fn friendly_read_data(extdata: &ExtdataArchive) -> (MiiMap, MiiMap) {

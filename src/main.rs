@@ -11,10 +11,6 @@ mod gui;
 mod phases;
 mod read;
 
-//                       .- PID of note sender
-//                       v      .- PID of friend
-type Remapping = HashMap<u32, u32>;
-
 struct Services<'a> {
     apt: &'a Apt,
     hid: &'a mut Hid,
@@ -37,12 +33,6 @@ impl<'a> Services<'a> {
     }
 }
 
-struct AppData {
-    friends: MiiMap,
-    doodles: MiiMap,
-    mapping: Remapping,
-}
-
 fn main() {
     ctru::applets::error::set_panic_hook(true);
     _ = run();
@@ -63,15 +53,9 @@ fn run() -> Result<(), ()> {
         console
     };
 
-    let mut data = AppData {
-        friends: MiiMap::new(),
-        doodles: MiiMap::new(),
-        mapping: Remapping::new(),
-    };
-
-    phases::intro(&mut services, &mut data)?;
-    let mut extdata = phases::reading(&mut services, &mut data)?;
-    //phases::mapping(&mut services, &mut data)?;
-    //hases::rewrite(&mut services, &mut extdata, &mut data)?;
+    phases::intro(&mut services)?;
+    let (extdata, read_data) = phases::reading(&mut services)?;
+    let mapping = phases::mapping(&mut services, read_data)?;
+    phases::rewrite(&mut services, extdata, mapping)?;
     Ok(())
 }
