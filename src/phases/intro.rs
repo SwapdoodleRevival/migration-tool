@@ -3,10 +3,8 @@ use crate::{
     gui::{GUI, TOP_SCREEN_WIDTH, TextBuffer},
 };
 use citro2d_sys::{
-    C2D_AlignCenter, C2D_AtBaseline, C2D_Color32, C2D_DrawRectSolid, C2D_SceneBegin,
-    C2D_TargetClear, C2D_Text, C2D_WithColor,
+    C2D_AlignCenter, C2D_Text,
 };
-use citro3d_sys::{C3D_FRAME_SYNCDRAW, C3D_FrameBegin, C3D_FrameEnd};
 use ctru::prelude::KeyPad;
 
 pub fn intro(s: &mut Services) -> Result<(), ()> {
