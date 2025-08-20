@@ -1,8 +1,3 @@
-use std::{
-    collections::HashMap,
-    io::{self, Write},
-    mem,
-};
 
 use crate::{
     Services,
@@ -10,7 +5,7 @@ use crate::{
 };
 use citro2d_sys::{
     C2D_AlignCenter, C2D_AtBaseline, C2D_Color32, C2D_DrawRectSolid, C2D_SceneBegin,
-    C2D_TargetClear, C2D_Text, C2D_TextBuf, C2D_TextBufDelete, C2D_TextOptimize, C2D_WithColor,
+    C2D_TargetClear, C2D_Text, C2D_WithColor,
 };
 use citro3d_sys::{C3D_FRAME_SYNCDRAW, C3D_FrameBegin, C3D_FrameEnd};
 use ctru::prelude::KeyPad;
@@ -76,7 +71,7 @@ impl<'a> Scene<'a> {
                 begin: textbuf.make_static_text(c"Press \u{E000} to begin"),
                 exit: textbuf.make_static_text(c"Press Start to exit"),
                 exit_anytime: textbuf.make_static_text(c"(you can do this at any point)"),
-                textbuf: textbuf,
+                textbuf,
             }
         }
     }

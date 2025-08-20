@@ -1,6 +1,6 @@
-use std::{collections::HashMap, io::Write};
+use std::io::Write;
 
-use std::io::{Cursor, Seek};
+use std::io::Cursor;
 
 use citro2d_sys::{
     C2D_AlignCenter, C2D_AtBaseline, C2D_Color32, C2D_DrawRectSolid, C2D_SceneBegin,
@@ -16,7 +16,7 @@ use libdoodle::{
 use crate::extdata::ExtdataArchive;
 use crate::gui::{GUI, TOP_SCREEN_HEIGHT, TOP_SCREEN_WIDTH, TextBuffer};
 use crate::phases::OldToNewPIDMapping;
-use crate::{Services, extdata, read::ReadExt};
+use crate::{Services, read::ReadExt};
 
 pub fn rewrite(
     s: &mut Services,
@@ -145,7 +145,7 @@ impl<'a> Scene<'a> {
                 progress_observe_bottom: textbuf.make_static_text(c"Look at the bottom screen."),
                 header_text_finished: textbuf.make_static_text(c"Finished!"),
                 finished_line: textbuf.make_static_text(c"Your notes have been migrated."),
-                textbuf: textbuf,
+                textbuf,
             }
         }
     }

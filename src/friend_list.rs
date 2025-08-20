@@ -26,7 +26,7 @@ pub fn load_friend_list() -> MiiMap {
 
 unsafe fn get_friend_info(friend_map: &mut MiiMap, handle: Handle) {
     unsafe {
-        let num_friends;
+        
         let mut friend_keys: [FriendKey; 100] = mem::zeroed();
         let mut friend_info: [FriendInfo; 100] = mem::zeroed();
 
@@ -45,7 +45,7 @@ unsafe fn get_friend_info(friend_map: &mut MiiMap, handle: Handle) {
             panic!("Something went wrong")
         }
 
-        num_friends = *cmdbuf.wrapping_add(2);
+        let num_friends = *cmdbuf.wrapping_add(2);
 
         let cmdbuf = ctru_sys::getThreadCommandBuffer();
         *cmdbuf = 0x1A00C4;

@@ -1,7 +1,5 @@
-use std::collections::HashMap;
 
 use ctru::prelude::*;
-use friend_list::MiiMap;
 
 use crate::gui::GUI;
 

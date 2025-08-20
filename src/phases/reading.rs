@@ -4,11 +4,11 @@ use std::{
 };
 
 use citro2d_sys::{
-    C2D_AlignCenter, C2D_AtBaseline, C2D_Color32, C2D_DrawRectSolid, C2D_DrawText, C2D_SceneBegin,
+    C2D_AlignCenter, C2D_AtBaseline, C2D_Color32, C2D_DrawRectSolid, C2D_SceneBegin,
     C2D_TargetClear, C2D_Text, C2D_WithColor,
 };
 use citro3d_sys::{C3D_FRAME_SYNCDRAW, C3D_FrameBegin, C3D_FrameEnd};
-use ctru::{prelude::KeyPad, services::cfgu::Region};
+use ctru::prelude::KeyPad;
 use libdoodle::{
     blocks::{common1, miistd1::MiiData},
     bpk1::{BPK1Blocks, BPK1File},
@@ -17,7 +17,7 @@ use libdoodle::{
 
 use crate::{
     Services,
-    extdata::{self, ExtdataArchive, SwapdoodleRegion},
+    extdata::{ExtdataArchive, SwapdoodleRegion},
     friend_list::{self, MiiMap},
     gui::{GUI, TOP_SCREEN_WIDTH, TextBuffer},
     read::ReadExt,
@@ -40,8 +40,8 @@ pub fn reading(s: &mut Services) -> Result<(ExtdataArchive, ReadResult), ()> {
     );
 
     let available: u8 = if extdatas.0.is_ok() { 1 } else { 0 }
-        + if extdatas.1.is_ok().into() { 1 } else { 0 }
-        + if extdatas.2.is_ok().into() { 1 } else { 0 };
+        + if extdatas.1.is_ok() { 1 } else { 0 }
+        + if extdatas.2.is_ok() { 1 } else { 0 };
 
     if available == 0 {
         scene.paint_no_extdata();
@@ -81,30 +81,21 @@ pub fn reading(s: &mut Services) -> Result<(ExtdataArchive, ReadResult), ()> {
             s.process()?;
 
             if s.hid.keys_down().contains(KeyPad::X) {
-                match extdatas.0 {
-                    Ok(e) => {
-                        extdata = e;
-                        break;
-                    }
-                    Err(_) => {}
+                if let Ok(e) = extdatas.0 {
+                    extdata = e;
+                    break;
                 };
             }
             if s.hid.keys_down().contains(KeyPad::Y) {
-                match extdatas.1 {
-                    Ok(e) => {
-                        extdata = e;
-                        break;
-                    }
-                    Err(_) => {}
+                if let Ok(e) = extdatas.1 {
+                    extdata = e;
+                    break;
                 };
             }
             if s.hid.keys_down().contains(KeyPad::B) {
-                match extdatas.2 {
-                    Ok(e) => {
-                        extdata = e;
-                        break;
-                    }
-                    Err(_) => {}
+                if let Ok(e) = extdatas.2 {
+                    extdata = e;
+                    break;
                 };
             }
         }
@@ -151,7 +142,7 @@ pub fn reading(s: &mut Services) -> Result<(ExtdataArchive, ReadResult), ()> {
         }
     }
 
-    return Ok((extdata, ReadResult { friends, doodles }));
+    Ok((extdata, ReadResult { friends, doodles }))
 }
 
 fn friendly_read_data(extdata: &ExtdataArchive) -> (MiiMap, MiiMap) {
@@ -184,7 +175,7 @@ fn friendly_read_data(extdata: &ExtdataArchive) -> (MiiMap, MiiMap) {
                 .unwrap();
         let sender_pid = common.sender_pid;
 
-        if let None = friends.get(&sender_pid) {
+        if friends.get(&sender_pid).is_none() {
             let letter_key = cursor.read_u32_le().unwrap();
             unknown_pids.insert(sender_pid, letter_key);
         }
@@ -259,7 +250,7 @@ impl<'a> Scene<'a> {
                 btn_us: textbuf.make_static_text(c"\u{E003}"),
                 reg_jp: textbuf.make_static_text(c"Japan"),
                 btn_jp: textbuf.make_static_text(c"\u{E001}"),
-                textbuf: textbuf,
+                textbuf,
             }
         }
     }
@@ -369,32 +360,23 @@ impl<'a> Scene<'a> {
 
         let mut y: f32 = 90.0;
 
-        match extdatas.0 {
-            Ok(_) => {
-                TextBuffer::draw(&self.btn_eu, 10.0, y, C2D_WithColor, self.white, 0.7);
-                TextBuffer::draw(&self.reg_eu, 30.0, y, C2D_WithColor, self.white, 0.7);
+        if let Ok(_) = extdatas.0 {
+            TextBuffer::draw(&self.btn_eu, 10.0, y, C2D_WithColor, self.white, 0.7);
+            TextBuffer::draw(&self.reg_eu, 30.0, y, C2D_WithColor, self.white, 0.7);
 
-                y += 30.0;
-            }
-            Err(_) => {}
+            y += 30.0;
         };
-        match extdatas.1 {
-            Ok(_) => {
-                TextBuffer::draw(&self.btn_us, 10.0, y, C2D_WithColor, self.white, 0.7);
-                TextBuffer::draw(&self.reg_us, 30.0, y, C2D_WithColor, self.white, 0.7);
+        if let Ok(_) = extdatas.1 {
+            TextBuffer::draw(&self.btn_us, 10.0, y, C2D_WithColor, self.white, 0.7);
+            TextBuffer::draw(&self.reg_us, 30.0, y, C2D_WithColor, self.white, 0.7);
 
-                y += 30.0;
-            }
-            Err(_) => {}
+            y += 30.0;
         };
-        match extdatas.2 {
-            Ok(_) => {
-                TextBuffer::draw(&self.btn_jp, 10.0, y, C2D_WithColor, self.white, 0.7);
-                TextBuffer::draw(&self.reg_jp, 30.0, y, C2D_WithColor, self.white, 0.7);
+        if let Ok(_) = extdatas.2 {
+            TextBuffer::draw(&self.btn_jp, 10.0, y, C2D_WithColor, self.white, 0.7);
+            TextBuffer::draw(&self.reg_jp, 30.0, y, C2D_WithColor, self.white, 0.7);
 
-                y += 30.0;
-            }
-            Err(_) => {}
+            y += 30.0;
         };
     }
 }

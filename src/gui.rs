@@ -6,7 +6,7 @@ use citro2d_sys::{
     C3D_RenderTarget,
 };
 use citro3d_sys::{C3D_DEFAULT_CMDBUF_SIZE, C3D_Init};
-use ctru::{GFX_BOTTOM, GFX_LEFT, GFX_TOP};
+use ctru::{GFX_LEFT, GFX_TOP};
 use ctru_sys as ctru;
 
 pub struct GUI {

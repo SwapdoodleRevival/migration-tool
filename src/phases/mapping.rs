@@ -1,22 +1,21 @@
 use std::{
     collections::HashMap,
-    ffi::{CStr, CString},
-    mem,
+    ffi::CString,
     str::FromStr,
 };
 
 use citro2d_sys::{
     C2D_AlignCenter, C2D_AlignRight, C2D_AtBaseline, C2D_Color32, C2D_DrawRectSolid,
-    C2D_SceneBegin, C2D_TargetClear, C2D_Text, C2D_TextParse, C2D_WithColor,
+    C2D_SceneBegin, C2D_TargetClear, C2D_Text, C2D_WithColor,
 };
 use citro3d_sys::{C3D_FRAME_SYNCDRAW, C3D_FrameBegin, C3D_FrameEnd};
-use ctru::prelude::{Console, KeyPad};
+use ctru::prelude::KeyPad;
 
 use crate::{
     Services,
     friend_list::MiiMap,
     gui::{GUI, TOP_SCREEN_HEIGHT, TOP_SCREEN_WIDTH, TextBuffer},
-    phases::{ReadResult, print_center},
+    phases::ReadResult,
 };
 
 //                                .- PID of note sender
@@ -69,7 +68,7 @@ fn pick_mapping(
         s.process()?;
         if dirty {
             scene.begin_paint();
-            scene.paint_mapping(&mapping, &read.doodles);
+            scene.paint_mapping(mapping, &read.doodles);
             scene.end_paint();
             dirty = false;
         }
@@ -202,7 +201,7 @@ impl<'a> Scene<'a> {
                 dont_map: textbuf.make_static_text(c"<don't map>"),
                 remapping: textbuf.make_static_text(c"Remapping"),
                 names,
-                textbuf: textbuf,
+                textbuf,
                 index: 0,
                 index_friend: 0,
             }
@@ -377,7 +376,7 @@ impl<'a> Scene<'a> {
             }
 
             TextBuffer::draw(
-                &self.names.get(pid).unwrap(),
+                self.names.get(pid).unwrap(),
                 10.0,
                 ypos,
                 C2D_WithColor,
@@ -442,7 +441,7 @@ impl<'a> Scene<'a> {
                 0.7,
             );
             TextBuffer::draw(
-                &self.names.get(&pid).unwrap(),
+                self.names.get(&pid).unwrap(),
                 110.0,
                 15.0,
                 C2D_WithColor | C2D_AtBaseline,
@@ -474,7 +473,7 @@ impl<'a> Scene<'a> {
                 }
 
                 TextBuffer::draw(
-                    &self.names.get(pid).unwrap(),
+                    self.names.get(pid).unwrap(),
                     10.0,
                     ypos,
                     C2D_WithColor,
