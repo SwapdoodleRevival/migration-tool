@@ -26,7 +26,6 @@ pub fn load_friend_list() -> MiiMap {
 
 unsafe fn get_friend_info(friend_map: &mut MiiMap, handle: Handle) {
     unsafe {
-        
         let mut friend_keys: [FriendKey; 100] = mem::zeroed();
         let mut friend_info: [FriendInfo; 100] = mem::zeroed();
 

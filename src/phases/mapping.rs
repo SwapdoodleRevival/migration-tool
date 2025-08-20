@@ -1,8 +1,4 @@
-use std::{
-    collections::HashMap,
-    ffi::CString,
-    str::FromStr,
-};
+use std::{collections::HashMap, ffi::CString, str::FromStr};
 
 use citro2d_sys::{
     C2D_AlignCenter, C2D_AlignRight, C2D_AtBaseline, C2D_Color32, C2D_DrawRectSolid,

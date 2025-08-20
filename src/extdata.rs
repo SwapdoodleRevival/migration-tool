@@ -1,12 +1,11 @@
 use std::{mem, os::raw::c_void};
 
 use ctru_sys::{
-    self, FS_Archive, FS_DirectoryEntry, FS_Path, FSDIR_Close, FSDIR_Read,
-    FSFILE_Close, FSFILE_Read, FSFILE_Write, FSUSER_CloseArchive, FSUSER_CreateFile,
-    FSUSER_DeleteFile, FSUSER_OpenArchive, FSUSER_OpenDirectory, FSUSER_OpenFile, Handle,
-    MEDIATYPE_SD, PATH_BINARY, PATH_UTF16, R_FAILED, R_SUCCEEDED, fsMakePath,
+    self, FS_Archive, FS_DirectoryEntry, FS_Path, FSDIR_Close, FSDIR_Read, FSFILE_Close,
+    FSFILE_Read, FSFILE_Write, FSUSER_CloseArchive, FSUSER_CreateFile, FSUSER_DeleteFile,
+    FSUSER_OpenArchive, FSUSER_OpenDirectory, FSUSER_OpenFile, Handle, MEDIATYPE_SD, PATH_BINARY,
+    PATH_UTF16, R_FAILED, R_SUCCEEDED, fsMakePath,
 };
-use libdoodle::bpk1::BPK1File;
 
 macro_rules! handle_error {
     ($res: expr) => {

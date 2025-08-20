@@ -1,4 +1,3 @@
-
 use crate::{
     Services,
     gui::{GUI, TOP_SCREEN_WIDTH, TextBuffer},

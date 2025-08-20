@@ -1,4 +1,3 @@
-
 use ctru::prelude::*;
 
 use crate::gui::GUI;
