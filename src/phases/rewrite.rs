@@ -14,7 +14,11 @@ use crate::gui::{GUI, TOP_SCREEN_HEIGHT, TOP_SCREEN_WIDTH, TextBuffer};
 use crate::phases::OldToNewPIDMapping;
 use crate::{Services, read::ReadExt};
 
-pub fn rewrite(s: &mut Services, extdata: ExtdataArchive, mapping: OldToNewPIDMapping) -> Result<(), ()> {
+pub fn rewrite(
+    s: &mut Services,
+    extdata: ExtdataArchive,
+    mapping: OldToNewPIDMapping,
+) -> Result<(), ()> {
     let scene = Scene::make(s.gui);
 
     loop {
@@ -45,7 +49,10 @@ pub fn rewrite(s: &mut Services, extdata: ExtdataArchive, mapping: OldToNewPIDMa
 fn do_rewrite(extdata: ExtdataArchive, mapping: OldToNewPIDMapping) {
     println!("Reading manage.bin...");
     let mut manage = BPK1Blocks::new_from_bpk1_bytes(&extdata.read_manage()).unwrap();
-    let cominf = manage.iter_mut().find(|k| k.name.as_bytes() == b"COMINF0").expect("manage.bin should have a COMINF0, but it doesn't!");
+    let cominf = manage
+        .iter_mut()
+        .find(|k| k.name.as_bytes() == b"COMINF0")
+        .expect("manage.bin should have a COMINF0, but it doesn't!");
 
     let mut cursor = Cursor::new(&mut cominf.data);
 
@@ -53,14 +60,18 @@ fn do_rewrite(extdata: ExtdataArchive, mapping: OldToNewPIDMapping) {
     cursor.set_position(0x40);
     for _ in 0..count {
         let pos = cursor.position();
-        let sender_pid = common1::CommonInfo::from_bytes(&(cursor.read_const_num_of_bytes::<0x40>().unwrap())).unwrap().sender_pid;
+        let sender_pid =
+            common1::CommonInfo::from_bytes(&(cursor.read_const_num_of_bytes::<0x40>().unwrap()))
+                .unwrap()
+                .sender_pid;
 
         if let Some(new_pid) = mapping.get(&sender_pid) {
             let letter_key = cursor.read_u32_le().unwrap();
             cursor.set_position(pos + 24);
             cursor.write_all(&u32::to_le_bytes(*new_pid)).unwrap();
 
-            let mut letter = BPK1Blocks::new_from_bpk1_bytes(&extdata.read_letter_index(letter_key)).unwrap();
+            let mut letter =
+                BPK1Blocks::new_from_bpk1_bytes(&extdata.read_letter_index(letter_key)).unwrap();
             let common_block = match letter.iter_mut().find(|k| k.name.as_bytes() == b"COMMON1") {
                 Some(k) => k,
                 None => continue,
@@ -77,7 +88,10 @@ fn do_rewrite(extdata: ExtdataArchive, mapping: OldToNewPIDMapping) {
     }
 
     println!("Rewriting manage.bin...");
-    extdata.write_file("/letter/manage.bin", &(BPK1Blocks::bytes_from_bpk1_blocks(manage).unwrap()));
+    extdata.write_file(
+        "/letter/manage.bin",
+        &(BPK1Blocks::bytes_from_bpk1_blocks(manage).unwrap()),
+    );
     println!("Rewrote manage.bin.");
 }
 
@@ -105,13 +119,18 @@ impl<'a> Scene<'a> {
         Scene {
             gui,
             header_text: textbuf.make_static_text(c"Ready to migrate"),
-            action_text: textbuf.make_static_text(c"We can now start migrating your Swapdoodle notes."),
-            nobkp_line1_text: textbuf.make_static_text(c"Reminder: This tool does not back up your extra data before migrating!"),
-            nobkp_line2_text: textbuf.make_static_text(c"If you do not have a backup, DO NOT CONTINUE!!!"),
+            action_text: textbuf
+                .make_static_text(c"We can now start migrating your Swapdoodle notes."),
+            nobkp_line1_text: textbuf.make_static_text(
+                c"Reminder: This tool does not back up your extra data before migrating!",
+            ),
+            nobkp_line2_text: textbuf
+                .make_static_text(c"If you do not have a backup, DO NOT CONTINUE!!!"),
             begin: textbuf.make_static_text(c"Press \u{E000} to begin"),
             exit: textbuf.make_static_text(c"Press Start to exit"),
             exit_a: textbuf.make_static_text(c"Press \u{E000} to exit"),
-            no_exit: textbuf.make_static_text(c"You cannot interrupt the migration once it has begun."),
+            no_exit: textbuf
+                .make_static_text(c"You cannot interrupt the migration once it has begun."),
             progress: textbuf.make_static_text(c"Migrating in progress..."),
             progress_observe_bottom: textbuf.make_static_text(c"Look at the bottom screen."),
             header_text_finished: textbuf.make_static_text(c"Finished!"),
@@ -125,20 +144,52 @@ impl<'a> Scene<'a> {
         self.gui.header(&self.header_text);
         self.gui.text(&self.action_text, 10.0, 40.0, 0, 0.5);
 
-        self.gui.text_danger(&self.nobkp_line1_text, 10.0, 60.0, 0, 0.4);
-        self.gui.text_danger(&self.nobkp_line2_text, 10.0, 70.0, 0, 0.4);
+        self.gui
+            .text_danger(&self.nobkp_line1_text, 10.0, 60.0, 0, 0.4);
+        self.gui
+            .text_danger(&self.nobkp_line2_text, 10.0, 70.0, 0, 0.4);
 
-        self.gui.text(&self.begin, TOP_SCREEN_WIDTH / 2.0, 100.0, C2D_AlignCenter, 0.7);
-        self.gui.text(&self.exit, TOP_SCREEN_WIDTH / 2.0, 130.0, C2D_AlignCenter, 0.7);
-        self.gui.text(&self.no_exit, TOP_SCREEN_WIDTH / 2.0, 155.0, C2D_AlignCenter, 0.5);
+        self.gui.text(
+            &self.begin,
+            TOP_SCREEN_WIDTH / 2.0,
+            100.0,
+            C2D_AlignCenter,
+            0.7,
+        );
+        self.gui.text(
+            &self.exit,
+            TOP_SCREEN_WIDTH / 2.0,
+            130.0,
+            C2D_AlignCenter,
+            0.7,
+        );
+        self.gui.text(
+            &self.no_exit,
+            TOP_SCREEN_WIDTH / 2.0,
+            155.0,
+            C2D_AlignCenter,
+            0.5,
+        );
 
         self.gui.end_frame();
     }
 
     pub fn paint_progess_page(&self) {
         self.gui.begin_frame();
-        self.gui.text(&self.progress, TOP_SCREEN_WIDTH / 2.0, TOP_SCREEN_HEIGHT / 2.0 - 40.0, C2D_AlignCenter, 0.7);
-        self.gui.text(&self.progress_observe_bottom, TOP_SCREEN_WIDTH / 2.0, TOP_SCREEN_HEIGHT / 2.0 + 40.0, C2D_AlignCenter, 0.5);
+        self.gui.text(
+            &self.progress,
+            TOP_SCREEN_WIDTH / 2.0,
+            TOP_SCREEN_HEIGHT / 2.0 - 40.0,
+            C2D_AlignCenter,
+            0.7,
+        );
+        self.gui.text(
+            &self.progress_observe_bottom,
+            TOP_SCREEN_WIDTH / 2.0,
+            TOP_SCREEN_HEIGHT / 2.0 + 40.0,
+            C2D_AlignCenter,
+            0.5,
+        );
         self.gui.end_frame();
     }
 
@@ -148,7 +199,13 @@ impl<'a> Scene<'a> {
 
         self.gui.text(&self.finished_line, 10.0, 40.0, 0, 0.5);
 
-        self.gui.text(&self.exit_a, TOP_SCREEN_WIDTH / 2.0, 100.0, C2D_AlignCenter, 0.7);
+        self.gui.text(
+            &self.exit_a,
+            TOP_SCREEN_WIDTH / 2.0,
+            100.0,
+            C2D_AlignCenter,
+            0.7,
+        );
 
         self.gui.end_frame();
     }

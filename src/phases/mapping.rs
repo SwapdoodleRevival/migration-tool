@@ -47,7 +47,12 @@ fn auto_match_by_mac(mapping: &mut OldToNewPIDMapping, read: &ReadResult) {
     }
 }
 
-fn pick_mapping(s: &mut Services, scene: &mut Scene, read: &ReadResult, mapping: &mut OldToNewPIDMapping) -> Result<(), ()> {
+fn pick_mapping(
+    s: &mut Services,
+    scene: &mut Scene,
+    read: &ReadResult,
+    mapping: &mut OldToNewPIDMapping,
+) -> Result<(), ()> {
     let mut dirty = true;
 
     loop {
@@ -66,7 +71,14 @@ fn pick_mapping(s: &mut Services, scene: &mut Scene, read: &ReadResult, mapping:
             dirty = true;
             scene.up(&read.doodles);
         } else if s.hid.keys_down().contains(KeyPad::A) {
-            let pid = *read.doodles.iter().enumerate().find(|i| i.0 == scene.get_index()).unwrap().1.0;
+            let pid = *read
+                .doodles
+                .iter()
+                .enumerate()
+                .find(|i| i.0 == scene.get_index())
+                .unwrap()
+                .1
+                .0;
             pick_friend(pid, s, scene, read, mapping)?;
             dirty = true;
         } else if s.hid.keys_down().contains(KeyPad::Y) {
@@ -75,7 +87,13 @@ fn pick_mapping(s: &mut Services, scene: &mut Scene, read: &ReadResult, mapping:
     }
 }
 
-fn pick_friend(pid: u32, s: &mut Services, scene: &mut Scene, read: &ReadResult, mapping: &mut OldToNewPIDMapping) -> Result<(), ()> {
+fn pick_friend(
+    pid: u32,
+    s: &mut Services,
+    scene: &mut Scene,
+    read: &ReadResult,
+    mapping: &mut OldToNewPIDMapping,
+) -> Result<(), ()> {
     let mut dirty = true;
 
     loop {
@@ -92,7 +110,14 @@ fn pick_friend(pid: u32, s: &mut Services, scene: &mut Scene, read: &ReadResult,
             dirty = true;
             scene.friend_up(&read.friends);
         } else if s.hid.keys_down().contains(KeyPad::A) {
-            let new_pid = *read.friends.iter().enumerate().find(|i| i.0 == scene.get_friend_index()).unwrap().1.0;
+            let new_pid = *read
+                .friends
+                .iter()
+                .enumerate()
+                .find(|i| i.0 == scene.get_friend_index())
+                .unwrap()
+                .1
+                .0;
             mapping.insert(pid, new_pid);
             return Ok(());
         } else if s.hid.keys_down().contains(KeyPad::X) {
@@ -143,8 +168,10 @@ impl<'a> Scene<'a> {
         Scene {
             gui,
             header_text: textbuf.make_static_text(c"Mapping"),
-            explanation_line1: textbuf.make_static_text(c"The migration tool has attempted to automatically"),
-            explanation_line2: textbuf.make_static_text(c"match unknown Doodle authors to your friends."),
+            explanation_line1: textbuf
+                .make_static_text(c"The migration tool has attempted to automatically"),
+            explanation_line2: textbuf
+                .make_static_text(c"match unknown Doodle authors to your friends."),
             explanation_line3: textbuf.make_static_text(c"You can change the suggested mapping"),
             explanation_line4: textbuf.make_static_text(c"before you begin the migration."),
             explanation_line5: textbuf.make_static_text(c"Highlight a mapping with \u{E07D} "),
@@ -171,14 +198,61 @@ impl<'a> Scene<'a> {
     pub fn dialog_explanation(&self) {
         const DIALOG_PADDING: f32 = 40.0;
         self.gui.dialog();
-        self.gui.blue_rect(DIALOG_PADDING, DIALOG_PADDING, TOP_SCREEN_WIDTH - 2.0 * DIALOG_PADDING, TOP_SCREEN_HEIGHT - 2.0 * DIALOG_PADDING);
-        self.gui.text(&self.explanation_line1, DIALOG_PADDING + 10.0, DIALOG_PADDING + 10.0, 0, 0.5);
-        self.gui.text(&self.explanation_line2, DIALOG_PADDING + 10.0, DIALOG_PADDING + 25.0, 0, 0.5);
-        self.gui.text(&self.explanation_line3, DIALOG_PADDING + 10.0, DIALOG_PADDING + 50.0, 0, 0.5);
-        self.gui.text(&self.explanation_line4, DIALOG_PADDING + 10.0, DIALOG_PADDING + 65.0, 0, 0.5);
-        self.gui.text(&self.explanation_line5, DIALOG_PADDING + 10.0, DIALOG_PADDING + 90.0, 0, 0.5);
-        self.gui.text(&self.explanation_line6, DIALOG_PADDING + 10.0, DIALOG_PADDING + 105.0, 0, 0.5);
-        self.gui.text(&self.press_a_continue, DIALOG_PADDING + 10.0, DIALOG_PADDING + 130.0, 0, 0.7);
+        self.gui.blue_rect(
+            DIALOG_PADDING,
+            DIALOG_PADDING,
+            TOP_SCREEN_WIDTH - 2.0 * DIALOG_PADDING,
+            TOP_SCREEN_HEIGHT - 2.0 * DIALOG_PADDING,
+        );
+        self.gui.text(
+            &self.explanation_line1,
+            DIALOG_PADDING + 10.0,
+            DIALOG_PADDING + 10.0,
+            0,
+            0.5,
+        );
+        self.gui.text(
+            &self.explanation_line2,
+            DIALOG_PADDING + 10.0,
+            DIALOG_PADDING + 25.0,
+            0,
+            0.5,
+        );
+        self.gui.text(
+            &self.explanation_line3,
+            DIALOG_PADDING + 10.0,
+            DIALOG_PADDING + 50.0,
+            0,
+            0.5,
+        );
+        self.gui.text(
+            &self.explanation_line4,
+            DIALOG_PADDING + 10.0,
+            DIALOG_PADDING + 65.0,
+            0,
+            0.5,
+        );
+        self.gui.text(
+            &self.explanation_line5,
+            DIALOG_PADDING + 10.0,
+            DIALOG_PADDING + 90.0,
+            0,
+            0.5,
+        );
+        self.gui.text(
+            &self.explanation_line6,
+            DIALOG_PADDING + 10.0,
+            DIALOG_PADDING + 105.0,
+            0,
+            0.5,
+        );
+        self.gui.text(
+            &self.press_a_continue,
+            DIALOG_PADDING + 10.0,
+            DIALOG_PADDING + 130.0,
+            0,
+            0.7,
+        );
     }
 
     pub fn end_paint(&self) {
@@ -227,8 +301,20 @@ impl<'a> Scene<'a> {
         const PAGE_SIZE: usize = 10;
         let mut line: usize = 0;
 
-        self.gui.rect(0.0, 20.0, TOP_SCREEN_WIDTH / 2.0, TOP_SCREEN_HEIGHT - 20.0 - 15.0, self.gui.dark_green);
-        self.gui.rect(TOP_SCREEN_WIDTH / 2.0, 20.0, TOP_SCREEN_WIDTH / 2.0, TOP_SCREEN_HEIGHT - 20.0 - 15.0, self.gui.dark_purple);
+        self.gui.rect(
+            0.0,
+            20.0,
+            TOP_SCREEN_WIDTH / 2.0,
+            TOP_SCREEN_HEIGHT - 20.0 - 15.0,
+            self.gui.dark_green,
+        );
+        self.gui.rect(
+            TOP_SCREEN_WIDTH / 2.0,
+            20.0,
+            TOP_SCREEN_WIDTH / 2.0,
+            TOP_SCREEN_HEIGHT - 20.0 - 15.0,
+            self.gui.dark_purple,
+        );
 
         for (i, (pid, mii)) in doodles.iter().enumerate() {
             if line == PAGE_SIZE {
@@ -246,7 +332,8 @@ impl<'a> Scene<'a> {
                 self.gui.highlight(0.0, ypos, TOP_SCREEN_WIDTH, 20.0);
             }
 
-            self.gui.text(self.names.get(pid).unwrap(), 10.0, ypos, 0, 0.6);
+            self.gui
+                .text(self.names.get(pid).unwrap(), 10.0, ypos, 0, 0.6);
 
             self.gui.text(
                 match mapping.get(pid) {
@@ -261,7 +348,13 @@ impl<'a> Scene<'a> {
 
             line += 1;
         }
-        self.gui.text(&self.press_y_done, TOP_SCREEN_WIDTH - 10.0, 225.0, C2D_AlignRight, 0.5);
+        self.gui.text(
+            &self.press_y_done,
+            TOP_SCREEN_WIDTH - 10.0,
+            225.0,
+            C2D_AlignRight,
+            0.5,
+        );
     }
 
     pub fn paint_whole_friend_picker(&self, pid: u32, friends: &MiiMap) {
@@ -270,10 +363,29 @@ impl<'a> Scene<'a> {
         unsafe {
             self.gui.begin_frame();
             self.gui.blue_rect(0.0, 0.0, TOP_SCREEN_WIDTH, 20.0);
-            self.gui.text(&self.press_b_back, TOP_SCREEN_WIDTH - 10.0, 225.0, C2D_AlignRight, 0.5);
-            self.gui.text(&self.press_x_clear, TOP_SCREEN_WIDTH - 70.0, 225.0, C2D_AlignRight, 0.5);
-            self.gui.text(&self.remapping, 10.0, 15.0, C2D_AtBaseline, 0.7);
-            self.gui.text(self.names.get(&pid).unwrap(), 110.0, 15.0, C2D_AtBaseline, 0.7);
+            self.gui.text(
+                &self.press_b_back,
+                TOP_SCREEN_WIDTH - 10.0,
+                225.0,
+                C2D_AlignRight,
+                0.5,
+            );
+            self.gui.text(
+                &self.press_x_clear,
+                TOP_SCREEN_WIDTH - 70.0,
+                225.0,
+                C2D_AlignRight,
+                0.5,
+            );
+            self.gui
+                .text(&self.remapping, 10.0, 15.0, C2D_AtBaseline, 0.7);
+            self.gui.text(
+                self.names.get(&pid).unwrap(),
+                110.0,
+                15.0,
+                C2D_AtBaseline,
+                0.7,
+            );
             let mut line: usize = 0;
             for (i, (pid, mii)) in friends.iter().enumerate() {
                 if line == PAGE_SIZE {
@@ -291,7 +403,8 @@ impl<'a> Scene<'a> {
                     self.gui.highlight(0.0, ypos, TOP_SCREEN_WIDTH, 20.0);
                 }
 
-                self.gui.text(self.names.get(pid).unwrap(), 10.0, ypos, 0, 0.6);
+                self.gui
+                    .text(self.names.get(pid).unwrap(), 10.0, ypos, 0, 0.6);
 
                 line += 1;
             }

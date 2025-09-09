@@ -1,9 +1,14 @@
 use std::{f32::consts::PI, ffi::CStr, mem};
 
 use citro2d_sys::{
-    C2D_AlignCenter, C2D_AtBaseline, C2D_Color32, C2D_CreateScreenTarget, C2D_DrawRectSolid, C2D_DrawText, C2D_Init, C2D_Prepare, C2D_SceneBegin, C2D_TargetClear, C2D_Text, C2D_TextBuf, C2D_TextBufDelete, C2D_TextBufNew, C2D_TextOptimize, C2D_TextParse, C2D_ViewRotate, C2D_WithColor, C3D_RenderTarget, C2D_DEFAULT_MAX_OBJECTS
+    C2D_AlignCenter, C2D_AtBaseline, C2D_Color32, C2D_CreateScreenTarget, C2D_DEFAULT_MAX_OBJECTS,
+    C2D_DrawRectSolid, C2D_DrawText, C2D_Init, C2D_Prepare, C2D_SceneBegin, C2D_TargetClear,
+    C2D_Text, C2D_TextBuf, C2D_TextBufDelete, C2D_TextBufNew, C2D_TextOptimize, C2D_TextParse,
+    C2D_ViewRotate, C2D_WithColor, C3D_RenderTarget,
 };
-use citro3d_sys::{C3D_DEFAULT_CMDBUF_SIZE, C3D_FRAME_SYNCDRAW, C3D_FrameBegin, C3D_FrameEnd, C3D_Init};
+use citro3d_sys::{
+    C3D_DEFAULT_CMDBUF_SIZE, C3D_FRAME_SYNCDRAW, C3D_FrameBegin, C3D_FrameEnd, C3D_Init,
+};
 use ctru::{GFX_LEFT, GFX_TOP};
 use ctru_sys as ctru;
 
@@ -55,12 +60,24 @@ impl GUI {
 
     pub fn header(&self, text: &C2D_Text) {
         self.blue_rect(0.0, 0.0, TOP_SCREEN_WIDTH, 30.0);
-        self.text(text, TOP_SCREEN_WIDTH / 2.0, 22.0, C2D_AlignCenter | C2D_AtBaseline, 0.7);
+        self.text(
+            text,
+            TOP_SCREEN_WIDTH / 2.0,
+            22.0,
+            C2D_AlignCenter | C2D_AtBaseline,
+            0.7,
+        );
     }
 
     pub fn header_small(&self, text: &C2D_Text) {
         self.blue_rect(0.0, 0.0, TOP_SCREEN_WIDTH, 20.0);
-        self.text(text, TOP_SCREEN_WIDTH / 2.0, 15.0, C2D_AlignCenter | C2D_AtBaseline, 0.7);
+        self.text(
+            text,
+            TOP_SCREEN_WIDTH / 2.0,
+            15.0,
+            C2D_AlignCenter | C2D_AtBaseline,
+            0.7,
+        );
     }
 
     pub fn blue_rect(&self, x: f32, y: f32, width: f32, height: f32) {
@@ -75,7 +92,14 @@ impl GUI {
 
     pub fn dialog(&self) {
         unsafe {
-            C2D_DrawRectSolid(0.0, 0.0, 0.0, TOP_SCREEN_WIDTH, TOP_SCREEN_HEIGHT, self.dialog_overlay);
+            C2D_DrawRectSolid(
+                0.0,
+                0.0,
+                0.0,
+                TOP_SCREEN_WIDTH,
+                TOP_SCREEN_HEIGHT,
+                self.dialog_overlay,
+            );
         }
     }
 
@@ -95,7 +119,16 @@ impl GUI {
 
     fn _draw_text(&self, text: &C2D_Text, x: f32, y: f32, flags: u8, color: u32, scale: f32) {
         unsafe {
-            C2D_DrawText(text as *const _, flags as u32, x, y, 0.0, scale, scale, color);
+            C2D_DrawText(
+                text as *const _,
+                flags as u32,
+                x,
+                y,
+                0.0,
+                scale,
+                scale,
+                color,
+            );
         }
     }
 
@@ -112,7 +145,11 @@ pub struct TextBuffer {
 
 impl TextBuffer {
     pub fn init(size: usize) -> Self {
-        unsafe { Self { buf: C2D_TextBufNew(size) } }
+        unsafe {
+            Self {
+                buf: C2D_TextBufNew(size),
+            }
+        }
     }
 
     pub fn make_static_text(&self, content: &CStr) -> C2D_Text {
