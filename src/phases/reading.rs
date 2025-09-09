@@ -29,22 +29,15 @@ pub fn reading(s: &mut Services) -> Result<(ExtdataArchive, ReadResult), ()> {
     let scene = Scene::make(s.gui);
     scene.begin_paint();
 
-    let extdatas = (
-        ExtdataArchive::open(SwapdoodleRegion::EU),
-        ExtdataArchive::open(SwapdoodleRegion::US),
-        ExtdataArchive::open(SwapdoodleRegion::JP),
-    );
+    let extdatas = (ExtdataArchive::open(SwapdoodleRegion::EU), ExtdataArchive::open(SwapdoodleRegion::US), ExtdataArchive::open(SwapdoodleRegion::JP));
 
-    let available: u8 = if extdatas.0.is_ok() { 1 } else { 0 }
-        + if extdatas.1.is_ok() { 1 } else { 0 }
-        + if extdatas.2.is_ok() { 1 } else { 0 };
+    let available: u8 = (extdatas.0.is_ok() as u8) + (extdatas.1.is_ok() as u8) + (extdatas.2.is_ok() as u8);
 
     if available == 0 {
-        scene.paint_no_extdata();
-        scene.end_paint();
-
         loop {
             s.process()?;
+            scene.paint_no_extdata();
+            scene.end_paint();
 
             if s.hid.keys_down().contains(KeyPad::A) {
                 return Err(());
@@ -55,15 +48,12 @@ pub fn reading(s: &mut Services) -> Result<(ExtdataArchive, ReadResult), ()> {
     let extdata;
 
     if available == 1 {
-        extdata = extdatas
-            .0
-            .unwrap_or_else(|_| extdatas.1.unwrap_or_else(|_| extdatas.2.unwrap()));
-
-        scene.paint_single_extdata(&extdata.region);
-        scene.end_paint();
+        extdata = extdatas.0.unwrap_or_else(|_| extdatas.1.unwrap_or_else(|_| extdatas.2.unwrap()));
 
         loop {
             s.process()?;
+            scene.paint_single_extdata(&extdata.region);
+            scene.end_paint();
 
             if s.hid.keys_down().contains(KeyPad::A) {
                 break;
@@ -152,10 +142,7 @@ fn friendly_read_data(extdata: &ExtdataArchive) -> (MiiMap, MiiMap) {
 
     println!("Reading file /letter/manage.bin...");
     let mut manage = BPK1Blocks::new_from_bpk1_bytes(&extdata.read_manage()).unwrap();
-    let cominf = manage
-        .iter_mut()
-        .find(|k| k.name.as_bytes() == b"COMINF0")
-        .expect("File /letter/manage.bin should have a COMINF0, but it doesn't!");
+    let cominf = manage.iter_mut().find(|k| k.name.as_bytes() == b"COMINF0").expect("File /letter/manage.bin should have a COMINF0, but it doesn't!");
 
     let mut cursor = Cursor::new(&cominf.data);
 
@@ -166,9 +153,7 @@ fn friendly_read_data(extdata: &ExtdataArchive) -> (MiiMap, MiiMap) {
 
     for _ in 0..count {
         let pos = cursor.position();
-        let common =
-            common1::CommonInfo::from_bytes(&(cursor.read_const_num_of_bytes::<0x40>().unwrap()))
-                .unwrap();
+        let common = common1::CommonInfo::from_bytes(&(cursor.read_const_num_of_bytes::<0x40>().unwrap())).unwrap();
         let sender_pid = common.sender_pid;
 
         if friends.get(&sender_pid).is_none() {
@@ -184,10 +169,7 @@ fn friendly_read_data(extdata: &ExtdataArchive) -> (MiiMap, MiiMap) {
 
     unknown_pids.iter().for_each(|row| {
         let key = *row.1;
-        if let Some(mii) = Letter::new_from_bpk1_bytes(&extdata.read_letter_index(key))
-            .unwrap()
-            .sender_mii
-        {
+        if let Some(mii) = Letter::new_from_bpk1_bytes(&extdata.read_letter_index(key)).unwrap().sender_mii {
             doodles.insert(*row.0, mii);
         }
     });
@@ -224,16 +206,13 @@ impl<'a> Scene<'a> {
         Scene {
             gui,
             header_text: textbuf.make_static_text(c"Confirm save data"),
-            no_extdata: textbuf
-                .make_static_text(c"It appears you do not have any Swapdoodle extdata."),
-            error_lmk: textbuf
-                .make_static_text(c"If you believe this is in error, please let us know!"),
+            no_extdata: textbuf.make_static_text(c"It appears you do not have any Swapdoodle extdata."),
+            error_lmk: textbuf.make_static_text(c"If you believe this is in error, please let us know!"),
             exit: textbuf.make_static_text(c"Press \u{E000} to exit"),
             begin_reading: textbuf.make_static_text(c"Press \u{E000} to begin reading."),
             detected_one_reg: textbuf.make_static_text(c"Detected region:"),
             detected_more_reg: textbuf.make_static_text(c"Detected several regions."),
-            detected_more_reg_line1: textbuf
-                .make_static_text(c"This tool can only work with one at a time."),
+            detected_more_reg_line1: textbuf.make_static_text(c"This tool can only work with one at a time."),
             detected_more_reg_line2: textbuf.make_static_text(c"Please select a region:"),
             reg_eu: textbuf.make_static_text(c"Europe"),
             btn_eu: textbuf.make_static_text(c"\u{E002}"),
@@ -253,13 +232,7 @@ impl<'a> Scene<'a> {
     pub fn paint_no_extdata(&self) {
         self.gui.text(&self.no_extdata, 10.0, 40.0, 0, 0.5);
         self.gui.text(&self.error_lmk, 10.0, 55.0, 0, 0.5);
-        self.gui.text(
-            &self.exit,
-            TOP_SCREEN_WIDTH / 2.0,
-            80.0,
-            C2D_AlignCenter,
-            0.7,
-        );
+        self.gui.text(&self.exit, TOP_SCREEN_WIDTH / 2.0, 80.0, C2D_AlignCenter, 0.7);
     }
 
     pub fn paint_single_extdata(&self, region: &SwapdoodleRegion) {
@@ -276,34 +249,19 @@ impl<'a> Scene<'a> {
             0.7,
         );
 
-        self.gui.text(
-            &self.begin_reading,
-            TOP_SCREEN_WIDTH / 2.0,
-            90.0,
-            C2D_AlignCenter,
-            0.7,
-        );
+        self.gui.text(&self.begin_reading, TOP_SCREEN_WIDTH / 2.0, 90.0, C2D_AlignCenter, 0.7);
     }
 
     pub fn end_paint(&self) {
         self.gui.end_frame();
     }
 
-    fn paint_several_extdata(
-        &self,
-        extdatas: &(
-            Result<ExtdataArchive, ()>,
-            Result<ExtdataArchive, ()>,
-            Result<ExtdataArchive, ()>,
-        ),
-    ) {
+    fn paint_several_extdata(&self, extdatas: &(Result<ExtdataArchive, ()>, Result<ExtdataArchive, ()>, Result<ExtdataArchive, ()>)) {
         self.gui.text(&self.detected_more_reg, 10.0, 40.0, 0, 0.5);
 
-        self.gui
-            .text(&self.detected_more_reg_line1, 10.0, 55.0, 0, 0.5);
+        self.gui.text(&self.detected_more_reg_line1, 10.0, 55.0, 0, 0.5);
 
-        self.gui
-            .text(&self.detected_more_reg_line2, 10.0, 70.0, 0, 0.5);
+        self.gui.text(&self.detected_more_reg_line2, 10.0, 70.0, 0, 0.5);
 
         let mut y: f32 = 90.0;
 
