@@ -10,7 +10,7 @@ use libdoodle::{
 };
 
 use crate::extdata::ExtdataArchive;
-use crate::gui::{GUI, TOP_SCREEN_HEIGHT, TOP_SCREEN_WIDTH, TextBuffer};
+use crate::gui::{Gui, TOP_SCREEN_HEIGHT, TOP_SCREEN_WIDTH, TextBuffer};
 use crate::phases::OldToNewPIDMapping;
 use crate::{Services, read::ReadExt};
 
@@ -96,7 +96,7 @@ fn do_rewrite(extdata: ExtdataArchive, mapping: OldToNewPIDMapping) {
 }
 
 struct Scene<'a> {
-    gui: &'a GUI,
+    gui: &'a Gui,
     textbuf: TextBuffer,
     header_text: C2D_Text,
     action_text: C2D_Text,
@@ -113,7 +113,7 @@ struct Scene<'a> {
 }
 
 impl<'a> Scene<'a> {
-    pub fn make(gui: &'a GUI) -> Self {
+    pub fn make(gui: &'a Gui) -> Self {
         let textbuf = TextBuffer::init(4096);
 
         Scene {

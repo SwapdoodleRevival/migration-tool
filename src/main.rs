@@ -1,6 +1,6 @@
 use ctru::prelude::*;
 
-use crate::gui::GUI;
+use crate::gui::Gui;
 
 mod extdata;
 mod friend_list;
@@ -12,7 +12,7 @@ struct Services<'a> {
     apt: &'a Apt,
     hid: &'a mut Hid,
     gfx: &'a Gfx,
-    gui: &'a GUI,
+    gui: &'a Gui,
     console: Console<'a>,
 }
 
@@ -40,7 +40,7 @@ fn run() -> Result<(), ()> {
     let mut hid = Hid::new().unwrap();
     let gfx: Gfx = Gfx::new().unwrap();
     let console = Console::new(gfx.bottom_screen.borrow_mut());
-    let gui = GUI::init();
+    let gui = Gui::init();
 
     let mut services = Services {
         apt: &apt,

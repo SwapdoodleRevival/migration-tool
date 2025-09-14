@@ -1,6 +1,6 @@
 use crate::{
     Services,
-    gui::{GUI, TOP_SCREEN_WIDTH, TextBuffer},
+    gui::{Gui, TOP_SCREEN_WIDTH, TextBuffer},
 };
 use citro2d_sys::{C2D_AlignCenter, C2D_Text};
 use ctru::prelude::KeyPad;
@@ -19,7 +19,7 @@ pub fn intro(s: &mut Services) -> Result<(), ()> {
 }
 
 struct Scene<'a> {
-    gui: &'a GUI,
+    gui: &'a Gui,
     textbuf: TextBuffer,
     header_text: C2D_Text,
     intro_line1_text: C2D_Text,
@@ -35,7 +35,7 @@ struct Scene<'a> {
 }
 
 impl<'a> Scene<'a> {
-    pub fn make(gui: &'a GUI) -> Self {
+    pub fn make(gui: &'a Gui) -> Self {
         let textbuf = TextBuffer::init(4096);
 
         Scene {

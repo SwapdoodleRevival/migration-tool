@@ -12,7 +12,7 @@ use citro3d_sys::{
 use ctru::{GFX_LEFT, GFX_TOP};
 use ctru_sys as ctru;
 
-pub struct GUI {
+pub struct Gui {
     pub screen: *mut C3D_RenderTarget,
     pub bg: u32,
     pub fg: u32,
@@ -27,7 +27,7 @@ pub struct GUI {
 pub const TOP_SCREEN_WIDTH: f32 = 400.0;
 pub const TOP_SCREEN_HEIGHT: f32 = 240.0;
 
-impl GUI {
+impl Gui {
     pub fn init() -> Self {
         unsafe {
             C3D_Init(C3D_DEFAULT_CMDBUF_SIZE as usize);

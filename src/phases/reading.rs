@@ -15,7 +15,7 @@ use crate::{
     Services,
     extdata::{ExtdataArchive, SwapdoodleRegion},
     friend_list::{self, MiiMap},
-    gui::{GUI, TOP_SCREEN_WIDTH, TextBuffer},
+    gui::{Gui, TOP_SCREEN_WIDTH, TextBuffer},
     read::ReadExt,
 };
 
@@ -195,7 +195,7 @@ fn friendly_read_data(extdata: &ExtdataArchive) -> (MiiMap, MiiMap) {
 }
 
 struct Scene<'a> {
-    gui: &'a GUI,
+    gui: &'a Gui,
     textbuf: TextBuffer,
     header_text: C2D_Text,
     no_extdata: C2D_Text,
@@ -215,7 +215,7 @@ struct Scene<'a> {
 }
 
 impl<'a> Scene<'a> {
-    pub fn make(gui: &'a GUI) -> Self {
+    pub fn make(gui: &'a Gui) -> Self {
         let textbuf = TextBuffer::init(4096);
 
         Scene {

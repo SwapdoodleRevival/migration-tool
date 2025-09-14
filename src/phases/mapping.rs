@@ -6,7 +6,7 @@ use ctru::prelude::KeyPad;
 use crate::{
     Services,
     friend_list::MiiMap,
-    gui::{GUI, TOP_SCREEN_HEIGHT, TOP_SCREEN_WIDTH, TextBuffer},
+    gui::{Gui, TOP_SCREEN_HEIGHT, TOP_SCREEN_WIDTH, TextBuffer},
     phases::ReadResult,
 };
 
@@ -130,7 +130,7 @@ fn pick_friend(
 }
 
 struct Scene<'a> {
-    gui: &'a GUI,
+    gui: &'a Gui,
     textbuf: TextBuffer,
     header_text: C2D_Text,
     explanation_line1: C2D_Text,
@@ -152,7 +152,7 @@ struct Scene<'a> {
 }
 
 impl<'a> Scene<'a> {
-    pub fn make(gui: &'a GUI, read: &ReadResult) -> Self {
+    pub fn make(gui: &'a Gui, read: &ReadResult) -> Self {
         let textbuf = TextBuffer::init(4096 * 8);
 
         let mut names = HashMap::<u32, C2D_Text>::new();
