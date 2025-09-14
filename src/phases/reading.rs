@@ -3,7 +3,7 @@ use std::{
     io::{self, Cursor, Write},
 };
 
-use citro2d_sys::{C2D_AlignCenter, C2D_Text};
+use citro2d_sys::{C2D_AlignCenter, C2D_AlignLeft, C2D_Text};
 use ctru::prelude::KeyPad;
 use libdoodle::{
     blocks::{common1, miistd1::MiiData},
@@ -15,7 +15,7 @@ use crate::{
     Services,
     extdata::{ExtdataArchive, SwapdoodleRegion},
     friend_list::{self, MiiMap},
-    gui::{Gui, TOP_SCREEN_WIDTH, TextBuffer},
+    gui::{Gui, ScrollableView, ScrollableViewData, TOP_SCREEN_WIDTH, TextBuffer},
     read::ReadExt,
 };
 
@@ -26,21 +26,14 @@ pub struct ReadResult {
 
 pub fn reading(s: &mut Services) -> Result<(ExtdataArchive, ReadResult), ()> {
     s.console.clear();
-    let scene = Scene::make(s.gui);
-    scene.begin_paint();
+    let mut scene = Scene::make(s.gui);
 
-    let extdatas = (
-        ExtdataArchive::open(SwapdoodleRegion::EU),
-        ExtdataArchive::open(SwapdoodleRegion::US),
-        ExtdataArchive::open(SwapdoodleRegion::JP),
-    );
+    let mut picker = ExtdataPicker::new();
 
-    let available: u8 =
-        (extdatas.0.is_ok() as u8) + (extdatas.1.is_ok() as u8) + (extdatas.2.is_ok() as u8);
-
-    if available == 0 {
+    if picker.none_available() {
         loop {
             s.process()?;
+            scene.begin_paint();
             scene.paint_no_extdata();
             scene.end_paint();
 
@@ -52,13 +45,12 @@ pub fn reading(s: &mut Services) -> Result<(ExtdataArchive, ReadResult), ()> {
 
     let extdata;
 
-    if available == 1 {
-        extdata = extdatas
-            .0
-            .unwrap_or_else(|_| extdatas.1.unwrap_or_else(|_| extdatas.2.unwrap()));
+    if picker.single_available() {
+        extdata = picker.available_archives.pop().unwrap();
 
         loop {
             s.process()?;
+            scene.begin_paint();
             scene.paint_single_extdata(&extdata.region);
             scene.end_paint();
 
@@ -67,29 +59,25 @@ pub fn reading(s: &mut Services) -> Result<(ExtdataArchive, ReadResult), ()> {
             }
         }
     } else {
-        scene.paint_several_extdata(&extdatas);
-        scene.end_paint();
+        let mut view = ScrollableView::new(&picker, 0.0, 100.0, 120.0, TOP_SCREEN_WIDTH, 20.0);
 
         loop {
+            scene.begin_paint();
+            scene.paint_several_extdata();
+            view.render(s.gui);
+            scene.end_paint();
+
             s.process()?;
 
-            if s.hid.keys_down().contains(KeyPad::X) {
-                if let Ok(e) = extdatas.0 {
-                    extdata = e;
-                    break;
-                };
+            if s.hid.keys_down().contains(KeyPad::DPAD_UP) {
+                view.up();
+            } else if s.hid.keys_down().contains(KeyPad::DPAD_DOWN) {
+                view.down();
             }
-            if s.hid.keys_down().contains(KeyPad::Y) {
-                if let Ok(e) = extdatas.1 {
-                    extdata = e;
-                    break;
-                };
-            }
-            if s.hid.keys_down().contains(KeyPad::B) {
-                if let Ok(e) = extdatas.2 {
-                    extdata = e;
-                    break;
-                };
+
+            if s.hid.keys_down().contains(KeyPad::A) {
+                extdata = picker.available_archives.swap_remove(view.current());
+                break;
             }
         }
     }
@@ -286,14 +274,7 @@ impl<'a> Scene<'a> {
         self.gui.end_frame();
     }
 
-    fn paint_several_extdata(
-        &self,
-        extdatas: &(
-            Result<ExtdataArchive, ()>,
-            Result<ExtdataArchive, ()>,
-            Result<ExtdataArchive, ()>,
-        ),
-    ) {
+    fn paint_several_extdata(&self) {
         self.gui.text(&self.detected_more_reg, 10.0, 40.0, 0, 0.5);
 
         self.gui
@@ -301,26 +282,61 @@ impl<'a> Scene<'a> {
 
         self.gui
             .text(&self.detected_more_reg_line2, 10.0, 70.0, 0, 0.5);
+    }
+}
 
-        let mut y: f32 = 90.0;
+struct ExtdataPicker {
+    textbuf: TextBuffer,
+    reg_eu: C2D_Text,
+    reg_us: C2D_Text,
+    reg_jp: C2D_Text,
 
-        if let Ok(_) = extdatas.0 {
-            self.gui.text(&self.btn_eu, 10.0, y, 0, 0.7);
-            self.gui.text(&self.reg_eu, 30.0, y, 0, 0.7);
+    available_archives: Vec<ExtdataArchive>,
+}
 
-            y += 30.0;
+impl ExtdataPicker {
+    fn new() -> Self {
+        let mut available_archives = vec![];
+        if let Ok(archive) = ExtdataArchive::open(SwapdoodleRegion::EU) {
+            available_archives.push(archive);
+        }
+        if let Ok(archive) = ExtdataArchive::open(SwapdoodleRegion::US) {
+            available_archives.push(archive);
+        }
+        if let Ok(archive) = ExtdataArchive::open(SwapdoodleRegion::JP) {
+            available_archives.push(archive);
+        }
+        let textbuf = TextBuffer::init(64);
+        Self {
+            available_archives,
+            reg_eu: textbuf.make_static_text(c"Europe"),
+            reg_us: textbuf.make_static_text(c"USA"),
+            reg_jp: textbuf.make_static_text(c"Japan"),
+            textbuf,
+        }
+    }
+
+    fn none_available(&self) -> bool {
+        self.available_archives.len() == 0
+    }
+
+    fn single_available(&self) -> bool {
+        self.available_archives.len() == 1
+    }
+}
+
+impl ScrollableViewData for ExtdataPicker {
+    fn render_line(&self, gui: &Gui, index: usize, x: f32, y: f32, width: f32, height: f32) {
+        let &text = match self.available_archives[index].region {
+            SwapdoodleRegion::EU => &self.reg_eu,
+            SwapdoodleRegion::US => &self.reg_us,
+            SwapdoodleRegion::JP => &self.reg_jp,
         };
-        if let Ok(_) = extdatas.1 {
-            self.gui.text(&self.btn_us, 10.0, y, 0, 0.7);
-            self.gui.text(&self.reg_us, 30.0, y, 0, 0.7);
 
-            y += 30.0;
-        };
-        if let Ok(_) = extdatas.2 {
-            self.gui.text(&self.btn_jp, 10.0, y, 0, 0.7);
-            self.gui.text(&self.reg_jp, 30.0, y, 0, 0.7);
+        gui.text(&text, x + 10.0, y, C2D_AlignLeft, 0.6);
+    }
 
-            y += 30.0;
-        };
+    fn count_items(&self) -> usize {
+        self.available_archives.len()
     }
 }

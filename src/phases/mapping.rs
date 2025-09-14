@@ -360,54 +360,52 @@ impl<'a> Scene<'a> {
     pub fn paint_whole_friend_picker(&self, pid: u32, friends: &MiiMap) {
         const PAGE_SIZE: usize = 10;
 
-        unsafe {
-            self.gui.begin_frame();
-            self.gui.blue_rect(0.0, 0.0, TOP_SCREEN_WIDTH, 20.0);
-            self.gui.text(
-                &self.press_b_back,
-                TOP_SCREEN_WIDTH - 10.0,
-                225.0,
-                C2D_AlignRight,
-                0.5,
-            );
-            self.gui.text(
-                &self.press_x_clear,
-                TOP_SCREEN_WIDTH - 70.0,
-                225.0,
-                C2D_AlignRight,
-                0.5,
-            );
-            self.gui
-                .text(&self.remapping, 10.0, 15.0, C2D_AtBaseline, 0.7);
-            self.gui.text(
-                self.names.get(&pid).unwrap(),
-                110.0,
-                15.0,
-                C2D_AtBaseline,
-                0.7,
-            );
-            let mut line: usize = 0;
-            for (i, (pid, mii)) in friends.iter().enumerate() {
-                if line == PAGE_SIZE {
-                    self.gui.text(&self.scroll_for_more, 10.0, 225.0, 0, 0.45);
-                    break;
-                }
-
-                if i < ((self.index_friend / PAGE_SIZE) * PAGE_SIZE) {
-                    continue;
-                }
-
-                let ypos: f32 = 25.0 + line as f32 * 20.0;
-
-                if i == self.index_friend {
-                    self.gui.highlight(0.0, ypos, TOP_SCREEN_WIDTH, 20.0);
-                }
-
-                self.gui
-                    .text(self.names.get(pid).unwrap(), 10.0, ypos, 0, 0.6);
-
-                line += 1;
+        self.gui.begin_frame();
+        self.gui.blue_rect(0.0, 0.0, TOP_SCREEN_WIDTH, 20.0);
+        self.gui.text(
+            &self.press_b_back,
+            TOP_SCREEN_WIDTH - 10.0,
+            225.0,
+            C2D_AlignRight,
+            0.5,
+        );
+        self.gui.text(
+            &self.press_x_clear,
+            TOP_SCREEN_WIDTH - 70.0,
+            225.0,
+            C2D_AlignRight,
+            0.5,
+        );
+        self.gui
+            .text(&self.remapping, 10.0, 15.0, C2D_AtBaseline, 0.7);
+        self.gui.text(
+            self.names.get(&pid).unwrap(),
+            110.0,
+            15.0,
+            C2D_AtBaseline,
+            0.7,
+        );
+        let mut line: usize = 0;
+        for (i, (pid, mii)) in friends.iter().enumerate() {
+            if line == PAGE_SIZE {
+                self.gui.text(&self.scroll_for_more, 10.0, 225.0, 0, 0.45);
+                break;
             }
+
+            if i < ((self.index_friend / PAGE_SIZE) * PAGE_SIZE) {
+                continue;
+            }
+
+            let ypos: f32 = 25.0 + line as f32 * 20.0;
+
+            if i == self.index_friend {
+                self.gui.highlight(0.0, ypos, TOP_SCREEN_WIDTH, 20.0);
+            }
+
+            self.gui
+                .text(self.names.get(pid).unwrap(), 10.0, ypos, 0, 0.6);
+
+            line += 1;
         }
     }
 }

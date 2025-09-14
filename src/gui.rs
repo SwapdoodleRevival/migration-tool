@@ -1,4 +1,4 @@
-use std::{f32::consts::PI, ffi::CStr, mem};
+use std::{cmp::min, f32::consts::PI, ffi::CStr, mem, ops::Div};
 
 use citro2d_sys::{
     C2D_AlignCenter, C2D_AtBaseline, C2D_Color32, C2D_CreateScreenTarget, C2D_DEFAULT_MAX_OBJECTS,
@@ -168,4 +168,69 @@ impl Drop for TextBuffer {
             C2D_TextBufDelete(self.buf);
         }
     }
+}
+
+pub struct ScrollableView<'a, T: ScrollableViewData> {
+    data: &'a T,
+    highlighted_item: usize,
+    x: f32,
+    y: f32,
+    height: f32,
+    width: f32,
+    item_height: f32,
+}
+
+impl<'a, T: ScrollableViewData> ScrollableView<'a, T> {
+    pub fn new(data: &'a T, x: f32, y: f32, height: f32, width: f32, item_height: f32) -> Self {
+        Self {
+            data,
+            highlighted_item: 0,
+            x,
+            y,
+            height,
+            width,
+            item_height,
+        }
+    }
+
+    fn max_items_on_screen(&self) -> usize {
+        self.height.div(self.item_height).floor() as usize
+    }
+
+    pub fn up(&mut self) {
+        if self.highlighted_item == 0 {
+            self.highlighted_item = self.data.count_items();
+        }
+        self.highlighted_item = self.highlighted_item.saturating_sub(1);
+    }
+
+    pub fn down(&mut self) {
+        self.highlighted_item = self.highlighted_item.saturating_add(1);
+        if self.highlighted_item == self.data.count_items() {
+            self.highlighted_item = 0;
+        }
+    }
+
+    pub fn current(&self) -> usize {
+        self.highlighted_item
+    }
+
+    pub fn render(&self, gui: &Gui) {
+        let max_items = self.max_items_on_screen();
+        let page_start = (self.highlighted_item / max_items) * max_items;
+        let mut y = self.y;
+        for index in page_start..page_start + min(self.data.count_items() - page_start, max_items) {
+            if index == self.highlighted_item {
+                gui.rect(self.x, y, self.width, self.item_height, gui.highlight_color);
+            }
+            self.data
+                .render_line(gui, index, self.x, y, self.width, self.item_height);
+            y += self.item_height;
+        }
+    }
+}
+
+pub trait ScrollableViewData {
+    fn render_line(&self, gui: &Gui, index: usize, x: f32, y: f32, width: f32, height: f32);
+    fn count_items(&self) -> usize;
 }
