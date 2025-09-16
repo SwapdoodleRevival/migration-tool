@@ -10,7 +10,7 @@ use libdoodle::{
 };
 
 use crate::extdata::ExtdataArchive;
-use crate::gui::{Gui, TOP_SCREEN_HEIGHT, TOP_SCREEN_WIDTH, TextBuffer};
+use crate::gui::{Gui, TOP_SCREEN_HEIGHT, TOP_SCREEN_WIDTH, TextBufferManager};
 use crate::phases::OldToNewPIDMapping;
 use crate::{Services, read::ReadExt};
 
@@ -19,10 +19,41 @@ pub fn rewrite(
     extdata: ExtdataArchive,
     mapping: OldToNewPIDMapping,
 ) -> Result<(), ()> {
-    let scene = Scene::make(s.gui);
+    let scene = Scene {
+        header_text: s.gui.textbuf.make_static_text(c"Ready to migrate"),
+        action_text: s
+            .gui
+            .textbuf
+            .make_static_text(c"We can now start migrating your Swapdoodle notes."),
+        nobkp_line1_text: s.gui.textbuf.make_static_text(
+            c"Reminder: This tool does not back up your extra data before migrating!",
+        ),
+        nobkp_line2_text: s
+            .gui
+            .textbuf
+            .make_static_text(c"If you do not have a backup, DO NOT CONTINUE!!!"),
+        begin: s.gui.textbuf.make_static_text(c"Press \u{E000} to begin"),
+        exit: s.gui.textbuf.make_static_text(c"Press Start to exit"),
+        exit_a: s.gui.textbuf.make_static_text(c"Press \u{E000} to exit"),
+        no_exit: s
+            .gui
+            .textbuf
+            .make_static_text(c"You cannot interrupt the migration once it has begun."),
+        progress: s.gui.textbuf.make_static_text(c"Migrating in progress..."),
+        progress_observe_bottom: s
+            .gui
+            .textbuf
+            .make_static_text(c"Look at the bottom screen."),
+        header_text_finished: s.gui.textbuf.make_static_text(c"Finished!"),
+        finished_line: s
+            .gui
+            .textbuf
+            .make_static_text(c"Your notes have been migrated."),
+        gui: s.gui,
+    };
 
     loop {
-        s.process()?;
+        Services::process(s.apt, s.gfx, s.hid)?;
         scene.paint_ready_page();
 
         if s.hid.keys_down().contains(KeyPad::A) {
@@ -35,7 +66,7 @@ pub fn rewrite(
     do_rewrite(extdata, mapping);
 
     loop {
-        s.process()?;
+        Services::process(s.apt, s.gfx, s.hid)?;
         scene.paint_done_page();
 
         if s.hid.keys_down().contains(KeyPad::A) {
@@ -97,7 +128,6 @@ fn do_rewrite(extdata: ExtdataArchive, mapping: OldToNewPIDMapping) {
 
 struct Scene<'a> {
     gui: &'a Gui,
-    textbuf: TextBuffer,
     header_text: C2D_Text,
     action_text: C2D_Text,
     nobkp_line1_text: C2D_Text,
@@ -113,32 +143,6 @@ struct Scene<'a> {
 }
 
 impl<'a> Scene<'a> {
-    pub fn make(gui: &'a Gui) -> Self {
-        let textbuf = TextBuffer::init(4096);
-
-        Scene {
-            gui,
-            header_text: textbuf.make_static_text(c"Ready to migrate"),
-            action_text: textbuf
-                .make_static_text(c"We can now start migrating your Swapdoodle notes."),
-            nobkp_line1_text: textbuf.make_static_text(
-                c"Reminder: This tool does not back up your extra data before migrating!",
-            ),
-            nobkp_line2_text: textbuf
-                .make_static_text(c"If you do not have a backup, DO NOT CONTINUE!!!"),
-            begin: textbuf.make_static_text(c"Press \u{E000} to begin"),
-            exit: textbuf.make_static_text(c"Press Start to exit"),
-            exit_a: textbuf.make_static_text(c"Press \u{E000} to exit"),
-            no_exit: textbuf
-                .make_static_text(c"You cannot interrupt the migration once it has begun."),
-            progress: textbuf.make_static_text(c"Migrating in progress..."),
-            progress_observe_bottom: textbuf.make_static_text(c"Look at the bottom screen."),
-            header_text_finished: textbuf.make_static_text(c"Finished!"),
-            finished_line: textbuf.make_static_text(c"Your notes have been migrated."),
-            textbuf,
-        }
-    }
-
     pub fn paint_ready_page(&self) {
         self.gui.begin_frame();
         self.gui.header(&self.header_text);

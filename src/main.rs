@@ -1,3 +1,5 @@
+use std::cell::OnceCell;
+
 use ctru::prelude::*;
 
 use crate::gui::Gui;
@@ -12,18 +14,18 @@ struct Services<'a> {
     apt: &'a Apt,
     hid: &'a mut Hid,
     gfx: &'a Gfx,
-    gui: &'a Gui,
+    gui: &'a mut Gui,
     console: Console<'a>,
 }
 
 impl<'a> Services<'a> {
-    fn process(&mut self) -> Result<(), ()> {
-        if !self.apt.main_loop() {
+    pub fn process(apt: &Apt, gfx: &Gfx, hid: &mut Hid) -> Result<(), ()> {
+        if !apt.main_loop() {
             return Err(());
         }
-        self.gfx.wait_for_vblank();
-        self.hid.scan_input();
-        if self.hid.keys_down().contains(KeyPad::START) {
+        gfx.wait_for_vblank();
+        hid.scan_input();
+        if hid.keys_down().contains(KeyPad::START) {
             return Err(());
         }
         Ok(())
@@ -40,13 +42,13 @@ fn run() -> Result<(), ()> {
     let mut hid = Hid::new().unwrap();
     let gfx: Gfx = Gfx::new().unwrap();
     let console = Console::new(gfx.bottom_screen.borrow_mut());
-    let gui = Gui::init();
+    let mut gui = Gui::init();
 
     let mut services = Services {
         apt: &apt,
         gfx: &gfx,
         hid: &mut hid,
-        gui: &gui,
+        gui: &mut gui,
         console,
     };
 

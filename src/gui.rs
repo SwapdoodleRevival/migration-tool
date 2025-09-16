@@ -1,10 +1,10 @@
-use std::{cmp::min, f32::consts::PI, ffi::CStr, mem, ops::Div};
+use std::{cmp::min, ffi::CStr, mem, ops::Div, ptr::null};
 
 use citro2d_sys::{
     C2D_AlignCenter, C2D_AtBaseline, C2D_Color32, C2D_CreateScreenTarget, C2D_DEFAULT_MAX_OBJECTS,
     C2D_DrawRectSolid, C2D_DrawText, C2D_Init, C2D_Prepare, C2D_SceneBegin, C2D_TargetClear,
-    C2D_Text, C2D_TextBuf, C2D_TextBufDelete, C2D_TextBufNew, C2D_TextOptimize, C2D_TextParse,
-    C2D_ViewRotate, C2D_WithColor, C3D_RenderTarget,
+    C2D_Text, C2D_TextBuf, C2D_TextBufDelete, C2D_TextBufNew, C2D_TextBufResize, C2D_TextOptimize,
+    C2D_TextParse, C2D_WithColor, C3D_RenderTarget,
 };
 use citro3d_sys::{
     C3D_DEFAULT_CMDBUF_SIZE, C3D_FRAME_SYNCDRAW, C3D_FrameBegin, C3D_FrameEnd, C3D_Init,
@@ -14,6 +14,7 @@ use ctru_sys as ctru;
 
 pub struct Gui {
     pub screen: *mut C3D_RenderTarget,
+    pub textbuf: TextBufferManager,
     pub bg: u32,
     pub fg: u32,
     pub red: u32,
@@ -38,6 +39,7 @@ impl Gui {
             C2D_Prepare();
             Self {
                 screen,
+                textbuf: TextBufferManager::init(512),
                 fg: C2D_Color32(255, 255, 255, 255),
                 red: C2D_Color32(255, 0, 0, 255),
                 blue: C2D_Color32(0, 40, 199, 255),
@@ -139,30 +141,37 @@ impl Gui {
     }
 }
 
-pub struct TextBuffer {
+pub struct TextBufferManager {
     buf: C2D_TextBuf,
+    glyph_count: usize,
 }
 
-impl TextBuffer {
+impl TextBufferManager {
     pub fn init(size: usize) -> Self {
         unsafe {
             Self {
                 buf: C2D_TextBufNew(size),
+                glyph_count: size,
             }
         }
     }
 
-    pub fn make_static_text(&self, content: &CStr) -> C2D_Text {
+    pub fn make_static_text(&mut self, content: &CStr) -> C2D_Text {
         unsafe {
             let mut text: C2D_Text = mem::zeroed();
-            C2D_TextParse(&mut text as *mut _, self.buf, content.as_ptr());
+            let end_of_parsing = C2D_TextParse(&mut text as *mut _, self.buf, content.as_ptr());
+            if *end_of_parsing != b'\0' {
+                self.glyph_count *= 2;
+                self.buf = C2D_TextBufResize(self.buf, self.glyph_count);
+                C2D_TextParse(&mut text as *mut _, self.buf, content.as_ptr());
+            }
             C2D_TextOptimize(&mut text as *mut _);
             text
         }
     }
 }
 
-impl Drop for TextBuffer {
+impl Drop for TextBufferManager {
     fn drop(&mut self) {
         unsafe {
             C2D_TextBufDelete(self.buf);

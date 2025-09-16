@@ -15,7 +15,7 @@ use crate::{
     Services,
     extdata::{ExtdataArchive, SwapdoodleRegion},
     friend_list::{self, MiiMap},
-    gui::{Gui, ScrollableView, ScrollableViewData, TOP_SCREEN_WIDTH, TextBuffer},
+    gui::{Gui, ScrollableView, ScrollableViewData, TOP_SCREEN_WIDTH, TextBufferManager},
     read::ReadExt,
 };
 
@@ -26,13 +26,43 @@ pub struct ReadResult {
 
 pub fn reading(s: &mut Services) -> Result<(ExtdataArchive, ReadResult), ()> {
     s.console.clear();
-    let mut scene = Scene::make(s.gui);
 
-    let mut picker = ExtdataPicker::new();
+    let mut picker = ExtdataPicker::new(s.gui);
+
+    let scene = Scene {
+        header_text: s.gui.textbuf.make_static_text(c"Confirm save data"),
+        no_extdata: s
+            .gui
+            .textbuf
+            .make_static_text(c"It appears you do not have any Swapdoodle extdata."),
+        error_lmk: s
+            .gui
+            .textbuf
+            .make_static_text(c"If you believe this is in error, please let us know!"),
+        exit: s.gui.textbuf.make_static_text(c"Press \u{E000} to exit"),
+        begin_reading: s
+            .gui
+            .textbuf
+            .make_static_text(c"Press \u{E000} to begin reading."),
+        detected_one_reg: s.gui.textbuf.make_static_text(c"Detected region:"),
+        detected_more_reg: s.gui.textbuf.make_static_text(c"Detected several regions."),
+        detected_more_reg_line1: s
+            .gui
+            .textbuf
+            .make_static_text(c"This tool can only work with one at a time."),
+        detected_more_reg_line2: s.gui.textbuf.make_static_text(c"Please select a region:"),
+        reg_eu: s.gui.textbuf.make_static_text(c"Europe"),
+        btn_eu: s.gui.textbuf.make_static_text(c"\u{E002}"),
+        reg_us: s.gui.textbuf.make_static_text(c"USA"),
+        btn_us: s.gui.textbuf.make_static_text(c"\u{E003}"),
+        reg_jp: s.gui.textbuf.make_static_text(c"Japan"),
+        btn_jp: s.gui.textbuf.make_static_text(c"\u{E001}"),
+        gui: s.gui,
+    };
 
     if picker.none_available() {
         loop {
-            s.process()?;
+            Services::process(s.apt, s.gfx, s.hid)?;
             scene.begin_paint();
             scene.paint_no_extdata();
             scene.end_paint();
@@ -49,7 +79,7 @@ pub fn reading(s: &mut Services) -> Result<(ExtdataArchive, ReadResult), ()> {
         extdata = picker.available_archives.pop().unwrap();
 
         loop {
-            s.process()?;
+            Services::process(s.apt, s.gfx, s.hid)?;
             scene.begin_paint();
             scene.paint_single_extdata(&extdata.region);
             scene.end_paint();
@@ -67,7 +97,7 @@ pub fn reading(s: &mut Services) -> Result<(ExtdataArchive, ReadResult), ()> {
             view.render(s.gui);
             scene.end_paint();
 
-            s.process()?;
+            Services::process(s.apt, s.gfx, s.hid)?;
 
             if s.hid.keys_down().contains(KeyPad::DPAD_UP) {
                 view.up();
@@ -98,7 +128,7 @@ pub fn reading(s: &mut Services) -> Result<(ExtdataArchive, ReadResult), ()> {
         println!("Press (A) to exit.");
 
         loop {
-            s.process()?;
+            Services::process(s.apt, s.gfx, s.hid)?;
 
             if s.hid.keys_down().contains(KeyPad::A) {
                 return Err(());
@@ -115,7 +145,7 @@ pub fn reading(s: &mut Services) -> Result<(ExtdataArchive, ReadResult), ()> {
         println!("Press (A) to exit.");
 
         loop {
-            s.process()?;
+            Services::process(s.apt, s.gfx, s.hid)?;
 
             if s.hid.keys_down().contains(KeyPad::A) {
                 return Err(());
@@ -184,7 +214,6 @@ fn friendly_read_data(extdata: &ExtdataArchive) -> (MiiMap, MiiMap) {
 
 struct Scene<'a> {
     gui: &'a Gui,
-    textbuf: TextBuffer,
     header_text: C2D_Text,
     no_extdata: C2D_Text,
     error_lmk: C2D_Text,
@@ -203,33 +232,6 @@ struct Scene<'a> {
 }
 
 impl<'a> Scene<'a> {
-    pub fn make(gui: &'a Gui) -> Self {
-        let textbuf = TextBuffer::init(4096);
-
-        Scene {
-            gui,
-            header_text: textbuf.make_static_text(c"Confirm save data"),
-            no_extdata: textbuf
-                .make_static_text(c"It appears you do not have any Swapdoodle extdata."),
-            error_lmk: textbuf
-                .make_static_text(c"If you believe this is in error, please let us know!"),
-            exit: textbuf.make_static_text(c"Press \u{E000} to exit"),
-            begin_reading: textbuf.make_static_text(c"Press \u{E000} to begin reading."),
-            detected_one_reg: textbuf.make_static_text(c"Detected region:"),
-            detected_more_reg: textbuf.make_static_text(c"Detected several regions."),
-            detected_more_reg_line1: textbuf
-                .make_static_text(c"This tool can only work with one at a time."),
-            detected_more_reg_line2: textbuf.make_static_text(c"Please select a region:"),
-            reg_eu: textbuf.make_static_text(c"Europe"),
-            btn_eu: textbuf.make_static_text(c"\u{E002}"),
-            reg_us: textbuf.make_static_text(c"USA"),
-            btn_us: textbuf.make_static_text(c"\u{E003}"),
-            reg_jp: textbuf.make_static_text(c"Japan"),
-            btn_jp: textbuf.make_static_text(c"\u{E001}"),
-            textbuf,
-        }
-    }
-
     pub fn begin_paint(&self) {
         self.gui.begin_frame();
         self.gui.header(&self.header_text);
@@ -286,7 +288,6 @@ impl<'a> Scene<'a> {
 }
 
 struct ExtdataPicker {
-    textbuf: TextBuffer,
     reg_eu: C2D_Text,
     reg_us: C2D_Text,
     reg_jp: C2D_Text,
@@ -295,7 +296,7 @@ struct ExtdataPicker {
 }
 
 impl ExtdataPicker {
-    fn new() -> Self {
+    fn new(gui: &mut Gui) -> Self {
         let mut available_archives = vec![];
         if let Ok(archive) = ExtdataArchive::open(SwapdoodleRegion::EU) {
             available_archives.push(archive);
@@ -306,13 +307,11 @@ impl ExtdataPicker {
         if let Ok(archive) = ExtdataArchive::open(SwapdoodleRegion::JP) {
             available_archives.push(archive);
         }
-        let textbuf = TextBuffer::init(64);
         Self {
             available_archives,
-            reg_eu: textbuf.make_static_text(c"Europe"),
-            reg_us: textbuf.make_static_text(c"USA"),
-            reg_jp: textbuf.make_static_text(c"Japan"),
-            textbuf,
+            reg_eu: gui.textbuf.make_static_text(c"Europe"),
+            reg_us: gui.textbuf.make_static_text(c"USA"),
+            reg_jp: gui.textbuf.make_static_text(c"Japan"),
         }
     }
 
