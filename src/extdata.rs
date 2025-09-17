@@ -181,7 +181,7 @@ enum OpenFlags {
     Create = 4,
 }
 
-#[repr(packed)]
+#[repr(C, packed)]
 #[allow(unused)]
 struct FileAttributes {
     is_directory: bool,

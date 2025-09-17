@@ -54,7 +54,7 @@ fn friendly_read_data(extdata: &ExtdataArchive) -> (MiiMap, MiiMap) {
                 .unwrap();
         let sender_pid = common.sender_pid;
 
-        if friends.get(&sender_pid).is_none() {
+        if !friends.contains_key(&sender_pid) {
             let letter_key = cursor.read_u32_le().unwrap();
             unknown_pids.insert(sender_pid, letter_key);
         }
