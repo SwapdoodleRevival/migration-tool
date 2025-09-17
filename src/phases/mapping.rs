@@ -9,8 +9,8 @@ use crate::{
     phases::{ReadResult, process},
 };
 
-//                                .- PID of note sender
-//                                v      .- PID of friend
+//                                    .- PID of note sender
+//                                    v      .- PID of friend
 pub type OldToNewPIDMapping = HashMap<u32, u32>;
 
 pub fn mapping<'a>(apt: &'a Apt, gfx: &'a Gfx, hid: &'a mut Hid, gui: &'a mut Gui) -> Scene<'a> {
