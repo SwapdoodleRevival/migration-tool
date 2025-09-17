@@ -1,4 +1,4 @@
-use std::{cmp::min, ffi::CStr, mem, ops::Div, ptr::null};
+use std::{cmp::min, ffi::CStr, mem, ops::Div};
 
 use citro2d_sys::{
     C2D_AlignCenter, C2D_AtBaseline, C2D_Color32, C2D_CreateScreenTarget, C2D_DEFAULT_MAX_OBJECTS,

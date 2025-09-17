@@ -1,7 +1,4 @@
-use crate::{
-    Services,
-    gui::{Gui, TOP_SCREEN_WIDTH, TextBufferManager},
-};
+use crate::{gui::{Gui, TOP_SCREEN_WIDTH}, phases::process};
 use citro2d_sys::{C2D_AlignCenter, C2D_Text};
 use ctru::prelude::{Apt, Gfx, Hid, KeyPad};
 
@@ -66,7 +63,7 @@ impl<'a> Scene<'a> {
 
     pub fn run(self) -> Result<(), ()> {
         loop {
-            Services::process(self.apt, self.gfx, self.hid)?;
+            process(self.apt, self.gfx, self.hid)?;
             self.paint();
 
             if self.hid.keys_down().contains(KeyPad::A) {

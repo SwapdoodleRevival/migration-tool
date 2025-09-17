@@ -1,16 +1,12 @@
-use std::{cell::RefCell, collections::HashMap, ffi::CString, rc::Rc, str::FromStr};
+use std::{cell::RefCell, collections::HashMap, ffi::CString, str::FromStr};
 
 use citro2d_sys::{C2D_AlignCenter, C2D_AlignLeft, C2D_AlignRight, C2D_AtBaseline, C2D_Text};
 use ctru::prelude::{Apt, Gfx, Hid, KeyPad};
 
 use crate::{
-    Services,
     friend_list::MiiMap,
-    gui::{
-        Gui, ScrollableView, ScrollableViewData, TOP_SCREEN_HEIGHT, TOP_SCREEN_WIDTH,
-        TextBufferManager,
-    },
-    phases::ReadResult,
+    gui::{Gui, ScrollableView, ScrollableViewData, TOP_SCREEN_HEIGHT, TOP_SCREEN_WIDTH},
+    phases::{ReadResult, process},
 };
 
 //                                .- PID of note sender
@@ -105,7 +101,7 @@ impl<'a> Scene<'a> {
         }
 
         loop {
-            Services::process(self.apt, self.gfx, self.hid)?;
+            process(self.apt, self.gfx, self.hid)?;
             self.begin_paint();
             self.dialog_explanation();
             self.end_paint();
@@ -146,7 +142,7 @@ impl<'a> Scene<'a> {
             ScrollableView::new(&mapping_picker, 0.0, 20.0, 200.0, TOP_SCREEN_WIDTH, 20.0);
 
         loop {
-            Services::process(self.apt, self.gfx, self.hid)?;
+            process(self.apt, self.gfx, self.hid)?;
             self.begin_paint();
             self.paint_mapping();
             view.render(self.gui);
@@ -176,7 +172,7 @@ impl<'a> Scene<'a> {
                         20.0,
                     );
                     loop {
-                        Services::process(self.apt, self.gfx, self.hid)?;
+                        process(self.apt, self.gfx, self.hid)?;
                         self.begin_paint();
                         self.paint_remapping(doodle_pal_pid, friends_picker.pid_name_texts);
                         view.render(self.gui);
@@ -372,7 +368,7 @@ impl<'a> MappingPicker<'a> {
 }
 
 impl ScrollableViewData for MappingPicker<'_> {
-    fn render_line(&self, gui: &Gui, index: usize, x: f32, y: f32, width: f32, height: f32) {
+    fn render_line(&self, gui: &Gui, index: usize, x: f32, y: f32, width: f32, _height: f32) {
         let current_pid = self
             .doodles
             .iter()
@@ -393,7 +389,7 @@ impl ScrollableViewData for MappingPicker<'_> {
         gui.text(
             match mapped_to {
                 Some(key) => &self.pid_name_texts[key],
-                None => &self.text_dont_map,
+                None => self.text_dont_map,
             },
             width - 10.0,
             y,
@@ -422,7 +418,7 @@ impl<'a> FriendPicker<'a> {
 }
 
 impl ScrollableViewData for FriendPicker<'_> {
-    fn render_line(&self, gui: &Gui, index: usize, x: f32, y: f32, width: f32, height: f32) {
+    fn render_line(&self, gui: &Gui, index: usize, x: f32, y: f32, _width: f32, _height: f32) {
         let current = self
             .friends
             .iter()

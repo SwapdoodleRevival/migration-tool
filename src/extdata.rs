@@ -174,6 +174,7 @@ impl Drop for ExtdataArchive {
 }
 
 #[repr(u32)]
+#[allow(unused)]
 enum OpenFlags {
     Read = 1,
     Write = 2,
@@ -181,6 +182,7 @@ enum OpenFlags {
 }
 
 #[repr(packed)]
+#[allow(unused)]
 struct FileAttributes {
     is_directory: bool,
     is_hidden: bool,

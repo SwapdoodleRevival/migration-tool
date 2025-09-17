@@ -13,9 +13,10 @@ use libdoodle::{
 };
 
 use crate::extdata::ExtdataArchive;
-use crate::gui::{Gui, TOP_SCREEN_HEIGHT, TOP_SCREEN_WIDTH, TextBufferManager};
+use crate::gui::{Gui, TOP_SCREEN_HEIGHT, TOP_SCREEN_WIDTH};
 use crate::phases::OldToNewPIDMapping;
-use crate::{Services, read::ReadExt};
+use crate::phases::process;
+use crate::read::ReadExt;
 
 pub fn rewrite<'a>(apt: &'a Apt, gfx: &'a Gfx, hid: &'a mut Hid, gui: &'a mut Gui) -> Scene<'a> {
     Scene::new(apt, gfx, hid, gui)
@@ -74,7 +75,7 @@ impl<'a> Scene<'a> {
 
     pub fn run(self, extdata: ExtdataArchive, mapping: OldToNewPIDMapping) -> Result<(), ()> {
         loop {
-            Services::process(self.apt, self.gfx, self.hid)?;
+            process(self.apt, self.gfx, self.hid)?;
             self.paint_ready_page();
 
             if self.hid.keys_down().contains(KeyPad::A) {
@@ -86,7 +87,7 @@ impl<'a> Scene<'a> {
         Self::do_rewrite(extdata, mapping);
 
         loop {
-            Services::process(self.apt, self.gfx, self.hid)?;
+            process(self.apt, self.gfx, self.hid)?;
             self.paint_done_page();
 
             if self.hid.keys_down().contains(KeyPad::A) {

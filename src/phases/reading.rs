@@ -12,11 +12,7 @@ use libdoodle::{
 };
 
 use crate::{
-    Services,
-    extdata::{ExtdataArchive, SwapdoodleRegion},
-    friend_list::{self, MiiMap},
-    gui::{Gui, ScrollableView, ScrollableViewData, TOP_SCREEN_WIDTH, TextBufferManager},
-    read::ReadExt,
+    extdata::{ExtdataArchive, SwapdoodleRegion}, friend_list::{self, MiiMap}, gui::{Gui, ScrollableView, ScrollableViewData, TOP_SCREEN_WIDTH}, phases::process, read::ReadExt
 };
 
 pub struct ReadResult {
@@ -138,7 +134,7 @@ impl<'a> Scene<'a> {
 
         if picker.none_available() {
             loop {
-                Services::process(self.apt, self.gfx, self.hid)?;
+                process(self.apt, self.gfx, self.hid)?;
                 self.begin_paint();
                 self.paint_no_extdata();
                 self.end_paint();
@@ -155,7 +151,7 @@ impl<'a> Scene<'a> {
             extdata = picker.available_archives.pop().unwrap();
 
             loop {
-                Services::process(self.apt, self.gfx, self.hid)?;
+                process(self.apt, self.gfx, self.hid)?;
                 self.begin_paint();
                 self.paint_single_extdata(&extdata.region);
                 self.end_paint();
@@ -173,7 +169,7 @@ impl<'a> Scene<'a> {
                 view.render(self.gui);
                 self.end_paint();
 
-                Services::process(self.apt, self.gfx, self.hid)?;
+                process(self.apt, self.gfx, self.hid)?;
 
                 if self.hid.keys_down().contains(KeyPad::DPAD_UP) {
                     view.up();
@@ -204,7 +200,7 @@ impl<'a> Scene<'a> {
             println!("Press (A) to exit.");
 
             loop {
-                Services::process(self.apt, self.gfx, self.hid)?;
+                process(self.apt, self.gfx, self.hid)?;
 
                 if self.hid.keys_down().contains(KeyPad::A) {
                     return Err(());
@@ -221,7 +217,7 @@ impl<'a> Scene<'a> {
             println!("Press (A) to exit.");
 
             loop {
-                Services::process(self.apt, self.gfx, self.hid)?;
+                process(self.apt, self.gfx, self.hid)?;
 
                 if self.hid.keys_down().contains(KeyPad::A) {
                     return Err(());
@@ -316,7 +312,7 @@ impl ExtdataPicker {
     }
 
     fn none_available(&self) -> bool {
-        self.available_archives.len() == 0
+        self.available_archives.is_empty()
     }
 
     fn single_available(&self) -> bool {
@@ -325,7 +321,7 @@ impl ExtdataPicker {
 }
 
 impl ScrollableViewData for ExtdataPicker {
-    fn render_line(&self, gui: &Gui, index: usize, x: f32, y: f32, width: f32, height: f32) {
+    fn render_line(&self, gui: &Gui, index: usize, x: f32, y: f32, _width: f32, _height: f32) {
         let &text = match self.available_archives[index].region {
             SwapdoodleRegion::EU => &self.reg_eu,
             SwapdoodleRegion::US => &self.reg_us,
