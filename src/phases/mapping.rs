@@ -1,12 +1,15 @@
-use std::{collections::HashMap, ffi::CString, str::FromStr};
+use std::{cell::RefCell, collections::HashMap, ffi::CString, rc::Rc, str::FromStr};
 
-use citro2d_sys::{C2D_AlignRight, C2D_AtBaseline, C2D_Text};
+use citro2d_sys::{C2D_AlignCenter, C2D_AlignLeft, C2D_AlignRight, C2D_AtBaseline, C2D_Text};
 use ctru::prelude::{Apt, Gfx, Hid, KeyPad};
 
 use crate::{
     Services,
     friend_list::MiiMap,
-    gui::{Gui, TOP_SCREEN_HEIGHT, TOP_SCREEN_WIDTH, TextBufferManager},
+    gui::{
+        Gui, ScrollableView, ScrollableViewData, TOP_SCREEN_HEIGHT, TOP_SCREEN_WIDTH,
+        TextBufferManager,
+    },
     phases::ReadResult,
 };
 
@@ -15,8 +18,8 @@ use crate::{
 pub type OldToNewPIDMapping = HashMap<u32, u32>;
 
 pub fn mapping(s: &mut Services, read: ReadResult) -> Result<OldToNewPIDMapping, ()> {
-    let mut mapping = OldToNewPIDMapping::new();
-    auto_match_by_mac(&mut mapping, &read);
+    let mapping = RefCell::new(OldToNewPIDMapping::new());
+    auto_match_by_mac(&mut mapping.borrow_mut(), &read);
 
     let mut names = HashMap::<u32, C2D_Text>::new();
     for (pid, mii) in read.doodles.iter() {
@@ -35,6 +38,8 @@ pub fn mapping(s: &mut Services, read: ReadResult) -> Result<OldToNewPIDMapping,
                 .make_static_text(&CString::from_str(&mii.mii_name).unwrap_or_default()),
         );
     }
+
+    let txt_dont_map = s.gui.textbuf.make_static_text(c"<don't map>");
 
     let mut scene = Scene {
         header_text: s.gui.textbuf.make_static_text(c"Mapping"),
@@ -69,12 +74,9 @@ pub fn mapping(s: &mut Services, read: ReadResult) -> Result<OldToNewPIDMapping,
         press_b_back: s.gui.textbuf.make_static_text(c"\u{E001} Back"),
         press_x_clear: s.gui.textbuf.make_static_text(c"\u{E002} Clear"),
         press_y_done: s.gui.textbuf.make_static_text(c"\u{E003} Finish"),
-        scroll_for_more: s.gui.textbuf.make_static_text(c"... scroll for more ..."),
-        dont_map: s.gui.textbuf.make_static_text(c"<don't map>"),
         remapping: s.gui.textbuf.make_static_text(c"Remapping"),
-        names,
-        index: 0,
-        index_friend: 0,
+        section_doodles: s.gui.textbuf.make_static_text(c"Doodle pals"),
+        section_friends: s.gui.textbuf.make_static_text(c"3DS Friends"),
         gui: s.gui,
     };
 
@@ -89,9 +91,18 @@ pub fn mapping(s: &mut Services, read: ReadResult) -> Result<OldToNewPIDMapping,
         }
     }
 
-    pick_mapping(s.apt, s.gfx, s.hid, &mut scene, &read, &mut mapping)?;
+    pick_mapping(
+        s.apt,
+        s.gfx,
+        s.hid,
+        &mut scene,
+        &names,
+        txt_dont_map,
+        &read,
+        &mapping,
+    )?;
 
-    Ok(mapping)
+    Ok(mapping.into_inner())
 }
 
 fn auto_match_by_mac(mapping: &mut OldToNewPIDMapping, read: &ReadResult) {
@@ -111,37 +122,37 @@ fn pick_mapping(
     gfx: &Gfx,
     hid: &mut Hid,
     scene: &mut Scene,
+    names: &HashMap<u32, C2D_Text>,
+    txt_dont_map: C2D_Text,
     read: &ReadResult,
-    mapping: &mut OldToNewPIDMapping,
+    mapping: &RefCell<OldToNewPIDMapping>,
 ) -> Result<(), ()> {
-    let mut dirty = true;
+    let mapping_picker = MappingPicker::new(mapping, &read.doodles, names, &txt_dont_map);
+    let friends_picker = FriendPicker::new(&read.friends, &names);
+
+    let mut view = ScrollableView::new(&mapping_picker, 0.0, 20.0, 200.0, TOP_SCREEN_WIDTH, 20.0);
 
     loop {
         Services::process(apt, gfx, hid)?;
-        if dirty {
-            scene.begin_paint();
-            scene.paint_mapping(mapping, &read.doodles);
-            scene.end_paint();
-            dirty = false;
-        }
+        scene.begin_paint();
+        scene.paint_mapping();
+        view.render(scene.gui);
+        scene.end_paint();
 
         if hid.keys_down().contains(KeyPad::DPAD_DOWN) {
-            dirty = true;
-            scene.down(&read.doodles);
+            view.down();
         } else if hid.keys_down().contains(KeyPad::DPAD_UP) {
-            dirty = true;
-            scene.up(&read.doodles);
+            view.up();
         } else if hid.keys_down().contains(KeyPad::A) {
             let pid = *read
                 .doodles
                 .iter()
                 .enumerate()
-                .find(|i| i.0 == scene.get_index())
+                .find(|i| i.0 == view.current())
                 .unwrap()
                 .1
                 .0;
-            pick_friend(apt, gfx, hid, pid, scene, read, mapping)?;
-            dirty = true;
+            pick_friend(apt, gfx, hid, scene, &friends_picker, pid, read, mapping)?;
         } else if hid.keys_down().contains(KeyPad::Y) {
             return Ok(());
         }
@@ -152,39 +163,38 @@ fn pick_friend(
     apt: &Apt,
     gfx: &Gfx,
     hid: &mut Hid,
-    pid: u32,
     scene: &mut Scene,
+    picker: &FriendPicker,
+    pid: u32,
     read: &ReadResult,
-    mapping: &mut OldToNewPIDMapping,
+    mapping: &RefCell<OldToNewPIDMapping>,
 ) -> Result<(), ()> {
-    let mut dirty = true;
+    let mut view = ScrollableView::new(picker, 0.0, 20.0, 200.0, TOP_SCREEN_WIDTH, 20.0);
 
     loop {
         Services::process(apt, gfx, hid)?;
-        if dirty {
-            scene.paint_whole_friend_picker(pid, &read.friends);
-            scene.end_paint();
-            dirty = false;
-        }
+        scene.begin_paint();
+        scene.paint_remapping(pid, picker.pid_name_texts);
+        view.render(scene.gui);
+        scene.end_paint();
+
         if hid.keys_down().contains(KeyPad::DPAD_DOWN) {
-            dirty = true;
-            scene.friend_down(&read.friends);
+            view.down();
         } else if hid.keys_down().contains(KeyPad::DPAD_UP) {
-            dirty = true;
-            scene.friend_up(&read.friends);
+            view.up();
         } else if hid.keys_down().contains(KeyPad::A) {
             let new_pid = *read
                 .friends
                 .iter()
                 .enumerate()
-                .find(|i| i.0 == scene.get_friend_index())
+                .find(|i| i.0 == view.current())
                 .unwrap()
                 .1
                 .0;
-            mapping.insert(pid, new_pid);
+            mapping.borrow_mut().insert(pid, new_pid);
             return Ok(());
         } else if hid.keys_down().contains(KeyPad::X) {
-            mapping.remove(&pid);
+            mapping.borrow_mut().remove(&pid);
             return Ok(());
         } else if hid.keys_down().contains(KeyPad::B) {
             return Ok(());
@@ -205,12 +215,9 @@ struct Scene<'a> {
     press_y_done: C2D_Text,
     press_x_clear: C2D_Text,
     press_b_back: C2D_Text,
-    scroll_for_more: C2D_Text,
-    dont_map: C2D_Text,
+    section_doodles: C2D_Text,
+    section_friends: C2D_Text,
     remapping: C2D_Text,
-    names: HashMap<u32, C2D_Text>,
-    index: usize,
-    index_friend: usize,
 }
 
 impl<'a> Scene<'a> {
@@ -283,107 +290,51 @@ impl<'a> Scene<'a> {
         self.gui.end_frame();
     }
 
-    pub fn down(&mut self, doodles: &MiiMap) {
-        self.index = self.index.saturating_add(1);
-        if self.index >= doodles.len() {
-            self.index = 0;
-        }
-    }
-
-    pub fn up(&mut self, doodles: &MiiMap) {
-        if self.index == 0 {
-            self.index = doodles.len() - 1;
-        } else {
-            self.index = self.index.saturating_sub(1);
-        }
-    }
-
-    pub fn friend_down(&mut self, friends: &MiiMap) {
-        self.index_friend = self.index_friend.saturating_add(1);
-        if self.index_friend >= friends.len() {
-            self.index_friend = 0;
-        }
-    }
-
-    pub fn friend_up(&mut self, friends: &MiiMap) {
-        if self.index_friend == 0 {
-            self.index_friend = friends.len() - 1;
-        } else {
-            self.index_friend = self.index_friend.saturating_sub(1);
-        }
-    }
-
-    pub fn get_index(&self) -> usize {
-        self.index
-    }
-
-    pub fn get_friend_index(&self) -> usize {
-        self.index_friend
-    }
-
-    pub fn paint_mapping(&self, mapping: &OldToNewPIDMapping, doodles: &MiiMap) {
-        const PAGE_SIZE: usize = 10;
-        let mut line: usize = 0;
-
-        self.gui.rect(
-            0.0,
-            20.0,
-            TOP_SCREEN_WIDTH / 2.0,
-            TOP_SCREEN_HEIGHT - 20.0 - 15.0,
-            self.gui.dark_green,
-        );
-        self.gui.rect(
-            TOP_SCREEN_WIDTH / 2.0,
-            20.0,
-            TOP_SCREEN_WIDTH / 2.0,
-            TOP_SCREEN_HEIGHT - 20.0 - 15.0,
-            self.gui.dark_purple,
-        );
-
-        for (i, (pid, mii)) in doodles.iter().enumerate() {
-            if line == PAGE_SIZE {
-                self.gui.text(&self.scroll_for_more, 10.0, 225.0, 0, 0.45);
-                break;
-            }
-
-            if i < ((self.index / PAGE_SIZE) * PAGE_SIZE) {
-                continue;
-            }
-
-            let ypos: f32 = 25.0 + line as f32 * 20.0;
-
-            if i == self.index {
-                self.gui.highlight(0.0, ypos, TOP_SCREEN_WIDTH, 20.0);
-            }
-
-            self.gui
-                .text(self.names.get(pid).unwrap(), 10.0, ypos, 0, 0.6);
-
-            self.gui.text(
-                match mapping.get(pid) {
-                    Some(new) => self.names.get(new).unwrap(),
-                    None => &self.dont_map,
-                },
-                TOP_SCREEN_WIDTH - 10.0,
-                ypos,
-                C2D_AlignRight,
-                0.6,
-            );
-
-            line += 1;
-        }
+    pub fn paint_mapping(&self) {
+        self.gui
+            .text(&self.section_doodles, 10.0, 225.0, C2D_AlignLeft, 0.5);
         self.gui.text(
-            &self.press_y_done,
+            &self.section_friends,
             TOP_SCREEN_WIDTH - 10.0,
             225.0,
             C2D_AlignRight,
             0.5,
         );
+
+        self.gui.rect(
+            0.0,
+            20.0,
+            TOP_SCREEN_WIDTH / 2.0,
+            TOP_SCREEN_HEIGHT - 20.0,
+            self.gui.side_swapdoodle,
+        );
+
+        self.gui.rect(
+            TOP_SCREEN_WIDTH / 2.0,
+            20.0,
+            TOP_SCREEN_WIDTH / 2.0,
+            TOP_SCREEN_HEIGHT - 20.0,
+            self.gui.side_friends,
+        );
+
+        self.gui.rect(
+            TOP_SCREEN_WIDTH / 2.0 - 40.0,
+            TOP_SCREEN_HEIGHT - 15.0,
+            40.0 * 2.0,
+            15.0,
+            self.gui.bg,
+        );
+
+        self.gui.text(
+            &self.press_y_done,
+            TOP_SCREEN_WIDTH / 2.0,
+            225.0,
+            C2D_AlignCenter,
+            0.5,
+        );
     }
 
-    pub fn paint_whole_friend_picker(&self, pid: u32, friends: &MiiMap) {
-        const PAGE_SIZE: usize = 10;
-
+    pub fn paint_remapping(&self, pid: u32, names: &HashMap<u32, C2D_Text>) {
         self.gui.begin_frame();
         self.gui.blue_rect(0.0, 0.0, TOP_SCREEN_WIDTH, 20.0);
         self.gui.text(
@@ -402,34 +353,103 @@ impl<'a> Scene<'a> {
         );
         self.gui
             .text(&self.remapping, 10.0, 15.0, C2D_AtBaseline, 0.7);
-        self.gui.text(
-            self.names.get(&pid).unwrap(),
-            110.0,
-            15.0,
-            C2D_AtBaseline,
-            0.7,
-        );
-        let mut line: usize = 0;
-        for (i, (pid, mii)) in friends.iter().enumerate() {
-            if line == PAGE_SIZE {
-                self.gui.text(&self.scroll_for_more, 10.0, 225.0, 0, 0.45);
-                break;
-            }
+        self.gui
+            .text(names.get(&pid).unwrap(), 110.0, 15.0, C2D_AtBaseline, 0.7);
+    }
+}
 
-            if i < ((self.index_friend / PAGE_SIZE) * PAGE_SIZE) {
-                continue;
-            }
+struct MappingPicker<'a> {
+    mapping: &'a RefCell<OldToNewPIDMapping>,
+    doodles: &'a MiiMap,
+    pid_name_texts: &'a HashMap<u32, C2D_Text>,
+    text_dont_map: &'a C2D_Text,
+}
 
-            let ypos: f32 = 25.0 + line as f32 * 20.0;
-
-            if i == self.index_friend {
-                self.gui.highlight(0.0, ypos, TOP_SCREEN_WIDTH, 20.0);
-            }
-
-            self.gui
-                .text(self.names.get(pid).unwrap(), 10.0, ypos, 0, 0.6);
-
-            line += 1;
+impl<'a> MappingPicker<'a> {
+    fn new(
+        mapping: &'a RefCell<OldToNewPIDMapping>,
+        doodles: &'a MiiMap,
+        pid_name_texts: &'a HashMap<u32, C2D_Text>,
+        text_dont_map: &'a C2D_Text,
+    ) -> Self {
+        Self {
+            mapping,
+            doodles,
+            pid_name_texts,
+            text_dont_map,
         }
+    }
+}
+
+impl ScrollableViewData for MappingPicker<'_> {
+    fn render_line(&self, gui: &Gui, index: usize, x: f32, y: f32, width: f32, height: f32) {
+        let current_pid = self
+            .doodles
+            .iter()
+            .enumerate()
+            .find(|i| i.0 == index)
+            .unwrap()
+            .1
+            .0;
+        let mapping_value = self.mapping.borrow();
+        let mapped_to = mapping_value.get(current_pid);
+        gui.text(
+            &self.pid_name_texts[current_pid],
+            x + 15.0,
+            y,
+            C2D_AlignLeft,
+            0.6,
+        );
+        gui.text(
+            match mapped_to {
+                Some(key) => &self.pid_name_texts[key],
+                None => &self.text_dont_map,
+            },
+            width - 10.0,
+            y,
+            C2D_AlignRight,
+            0.6,
+        );
+    }
+
+    fn count_items(&self) -> usize {
+        self.doodles.len()
+    }
+}
+
+struct FriendPicker<'a> {
+    friends: &'a MiiMap,
+    pid_name_texts: &'a HashMap<u32, C2D_Text>,
+}
+
+impl<'a> FriendPicker<'a> {
+    fn new(friends: &'a MiiMap, pid_name_texts: &'a HashMap<u32, C2D_Text>) -> Self {
+        Self {
+            friends,
+            pid_name_texts,
+        }
+    }
+}
+
+impl ScrollableViewData for FriendPicker<'_> {
+    fn render_line(&self, gui: &Gui, index: usize, x: f32, y: f32, width: f32, height: f32) {
+        let current = self
+            .friends
+            .iter()
+            .enumerate()
+            .find(|i| i.0 == index)
+            .unwrap()
+            .1;
+        gui.text(
+            &self.pid_name_texts[current.0],
+            x + 15.0,
+            y,
+            C2D_AlignLeft,
+            0.6,
+        );
+    }
+
+    fn count_items(&self) -> usize {
+        self.friends.len()
     }
 }

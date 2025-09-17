@@ -21,8 +21,8 @@ pub struct Gui {
     pub blue: u32,
     pub dialog_overlay: u32,
     pub highlight_color: u32,
-    pub dark_purple: u32,
-    pub dark_green: u32,
+    pub side_friends: u32,
+    pub side_swapdoodle: u32,
 }
 
 pub const TOP_SCREEN_WIDTH: f32 = 400.0;
@@ -44,8 +44,8 @@ impl Gui {
                 red: C2D_Color32(255, 0, 0, 255),
                 blue: C2D_Color32(0, 40, 199, 255),
                 dialog_overlay: C2D_Color32(0, 0, 0, 120),
-                dark_purple: C2D_Color32(31, 16, 42, 255),
-                dark_green: C2D_Color32(16, 42, 16, 255),
+                side_friends: C2D_Color32(245, 142, 11, 80),
+                side_swapdoodle: C2D_Color32(55, 83, 9, 100),
                 highlight_color: C2D_Color32(255, 255, 255, 90),
                 bg: C2D_Color32(20, 20, 20, 255),
             }
@@ -102,12 +102,6 @@ impl Gui {
                 TOP_SCREEN_HEIGHT,
                 self.dialog_overlay,
             );
-        }
-    }
-
-    pub fn highlight(&self, x: f32, y: f32, width: f32, height: f32) {
-        unsafe {
-            C2D_DrawRectSolid(x, y, 0.0, width, height, self.highlight_color);
         }
     }
 
@@ -226,7 +220,10 @@ impl<'a, T: ScrollableViewData> ScrollableView<'a, T> {
 
     pub fn render(&self, gui: &Gui) {
         let max_items = self.max_items_on_screen();
-        let page_start = (self.highlighted_item / max_items) * max_items;
+        let count_pages = self.data.count_items() / max_items + 1;
+        let current_page = self.highlighted_item / max_items;
+        let page_start = current_page * max_items;
+
         let mut y = self.y;
         for index in page_start..page_start + min(self.data.count_items() - page_start, max_items) {
             if index == self.highlighted_item {
@@ -236,6 +233,16 @@ impl<'a, T: ScrollableViewData> ScrollableView<'a, T> {
                 .render_line(gui, index, self.x, y, self.width, self.item_height);
             y += self.item_height;
         }
+
+        gui.rect(self.x, self.y, 5.0, self.height, gui.dialog_overlay);
+        let indicator_height = self.height / count_pages as f32;
+        gui.rect(
+            self.x,
+            self.y + indicator_height * current_page as f32,
+            5.0,
+            indicator_height,
+            gui.highlight_color,
+        );
     }
 }
 

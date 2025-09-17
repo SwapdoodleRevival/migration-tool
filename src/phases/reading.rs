@@ -52,11 +52,8 @@ pub fn reading(s: &mut Services) -> Result<(ExtdataArchive, ReadResult), ()> {
             .make_static_text(c"This tool can only work with one at a time."),
         detected_more_reg_line2: s.gui.textbuf.make_static_text(c"Please select a region:"),
         reg_eu: s.gui.textbuf.make_static_text(c"Europe"),
-        btn_eu: s.gui.textbuf.make_static_text(c"\u{E002}"),
         reg_us: s.gui.textbuf.make_static_text(c"USA"),
-        btn_us: s.gui.textbuf.make_static_text(c"\u{E003}"),
         reg_jp: s.gui.textbuf.make_static_text(c"Japan"),
-        btn_jp: s.gui.textbuf.make_static_text(c"\u{E001}"),
         gui: s.gui,
     };
 
@@ -222,11 +219,8 @@ struct Scene<'a> {
     detected_more_reg_line1: C2D_Text,
     detected_more_reg_line2: C2D_Text,
     reg_eu: C2D_Text,
-    btn_eu: C2D_Text,
     reg_us: C2D_Text,
-    btn_us: C2D_Text,
     reg_jp: C2D_Text,
-    btn_jp: C2D_Text,
     exit: C2D_Text,
     begin_reading: C2D_Text,
 }
@@ -332,7 +326,7 @@ impl ScrollableViewData for ExtdataPicker {
             SwapdoodleRegion::JP => &self.reg_jp,
         };
 
-        gui.text(&text, x + 10.0, y, C2D_AlignLeft, 0.6);
+        gui.text(&text, x + 15.0, y, C2D_AlignLeft, 0.6);
     }
 
     fn count_items(&self) -> usize {
