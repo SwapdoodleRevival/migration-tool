@@ -3,6 +3,9 @@ use std::io::Write;
 use std::io::Cursor;
 
 use citro2d_sys::{C2D_AlignCenter, C2D_Text};
+use ctru::prelude::Apt;
+use ctru::prelude::Gfx;
+use ctru::prelude::Hid;
 use ctru::prelude::KeyPad;
 use libdoodle::{
     blocks::common1,
@@ -14,120 +17,11 @@ use crate::gui::{Gui, TOP_SCREEN_HEIGHT, TOP_SCREEN_WIDTH, TextBufferManager};
 use crate::phases::OldToNewPIDMapping;
 use crate::{Services, read::ReadExt};
 
-pub fn rewrite(
-    s: &mut Services,
-    extdata: ExtdataArchive,
-    mapping: OldToNewPIDMapping,
-) -> Result<(), ()> {
-    let scene = Scene {
-        header_text: s.gui.textbuf.make_static_text(c"Ready to migrate"),
-        action_text: s
-            .gui
-            .textbuf
-            .make_static_text(c"We can now start migrating your Swapdoodle notes."),
-        nobkp_line1_text: s.gui.textbuf.make_static_text(
-            c"Reminder: This tool does not back up your extra data before migrating!",
-        ),
-        nobkp_line2_text: s
-            .gui
-            .textbuf
-            .make_static_text(c"If you do not have a backup, DO NOT CONTINUE!!!"),
-        begin: s.gui.textbuf.make_static_text(c"Press \u{E000} to begin"),
-        exit: s.gui.textbuf.make_static_text(c"Press Start to exit"),
-        exit_a: s.gui.textbuf.make_static_text(c"Press \u{E000} to exit"),
-        no_exit: s
-            .gui
-            .textbuf
-            .make_static_text(c"You cannot interrupt the migration once it has begun."),
-        progress: s.gui.textbuf.make_static_text(c"Migrating in progress..."),
-        progress_observe_bottom: s
-            .gui
-            .textbuf
-            .make_static_text(c"Look at the bottom screen."),
-        header_text_finished: s.gui.textbuf.make_static_text(c"Finished!"),
-        finished_line: s
-            .gui
-            .textbuf
-            .make_static_text(c"Your notes have been migrated."),
-        gui: s.gui,
-    };
-
-    loop {
-        Services::process(s.apt, s.gfx, s.hid)?;
-        scene.paint_ready_page();
-
-        if s.hid.keys_down().contains(KeyPad::A) {
-            break;
-        }
-    }
-
-    s.console.clear();
-    scene.paint_progess_page();
-    do_rewrite(extdata, mapping);
-
-    loop {
-        Services::process(s.apt, s.gfx, s.hid)?;
-        scene.paint_done_page();
-
-        if s.hid.keys_down().contains(KeyPad::A) {
-            break;
-        }
-    }
-
-    Ok(())
+pub fn rewrite<'a>(apt: &'a Apt, gfx: &'a Gfx, hid: &'a mut Hid, gui: &'a mut Gui) -> Scene<'a> {
+    Scene::new(apt, gfx, hid, gui)
 }
 
-fn do_rewrite(extdata: ExtdataArchive, mapping: OldToNewPIDMapping) {
-    println!("Reading manage.bin...");
-    let mut manage = BPK1Blocks::new_from_bpk1_bytes(&extdata.read_manage()).unwrap();
-    let cominf = manage
-        .iter_mut()
-        .find(|k| k.name.as_bytes() == b"COMINF0")
-        .expect("manage.bin should have a COMINF0, but it doesn't!");
-
-    let mut cursor = Cursor::new(&mut cominf.data);
-
-    let count = cursor.read_u32_le().unwrap();
-    cursor.set_position(0x40);
-    for _ in 0..count {
-        let pos = cursor.position();
-        let sender_pid =
-            common1::CommonInfo::from_bytes(&(cursor.read_const_num_of_bytes::<0x40>().unwrap()))
-                .unwrap()
-                .sender_pid;
-
-        if let Some(new_pid) = mapping.get(&sender_pid) {
-            let letter_key = cursor.read_u32_le().unwrap();
-            cursor.set_position(pos + 24);
-            cursor.write_all(&u32::to_le_bytes(*new_pid)).unwrap();
-
-            let mut letter =
-                BPK1Blocks::new_from_bpk1_bytes(&extdata.read_letter_index(letter_key)).unwrap();
-            let common_block = match letter.iter_mut().find(|k| k.name.as_bytes() == b"COMMON1") {
-                Some(k) => k,
-                None => continue,
-            };
-
-            common_block.data[24..28].copy_from_slice(&u32::to_le_bytes(*new_pid));
-
-            let out = BPK1Blocks::bytes_from_bpk1_blocks(letter).unwrap();
-
-            extdata.write_letter_index(letter_key, &out);
-        }
-
-        cursor.set_position(pos + 0x80);
-    }
-
-    println!("Rewriting manage.bin...");
-    extdata.write_file(
-        "/letter/manage.bin",
-        &(BPK1Blocks::bytes_from_bpk1_blocks(manage).unwrap()),
-    );
-    println!("Rewrote manage.bin.");
-}
-
-struct Scene<'a> {
-    gui: &'a Gui,
+pub struct Scene<'a> {
     header_text: C2D_Text,
     action_text: C2D_Text,
     nobkp_line1_text: C2D_Text,
@@ -140,9 +34,121 @@ struct Scene<'a> {
     finished_line: C2D_Text,
     exit: C2D_Text,
     exit_a: C2D_Text,
+    apt: &'a Apt,
+    gfx: &'a Gfx,
+    hid: &'a mut Hid,
+    gui: &'a mut Gui,
 }
 
 impl<'a> Scene<'a> {
+    fn new(apt: &'a Apt, gfx: &'a Gfx, hid: &'a mut Hid, gui: &'a mut Gui) -> Self {
+        Scene {
+            header_text: gui.textbuf.make_static_text(c"Ready to migrate"),
+            action_text: gui
+                .textbuf
+                .make_static_text(c"We can now start migrating your Swapdoodle notes."),
+            nobkp_line1_text: gui.textbuf.make_static_text(
+                c"Reminder: This tool does not back up your extra data before migrating!",
+            ),
+            nobkp_line2_text: gui
+                .textbuf
+                .make_static_text(c"If you do not have a backup, DO NOT CONTINUE!!!"),
+            begin: gui.textbuf.make_static_text(c"Press \u{E000} to begin"),
+            exit: gui.textbuf.make_static_text(c"Press Start to exit"),
+            exit_a: gui.textbuf.make_static_text(c"Press \u{E000} to exit"),
+            no_exit: gui
+                .textbuf
+                .make_static_text(c"You cannot interrupt the migration once it has begun."),
+            progress: gui.textbuf.make_static_text(c"Migrating in progress..."),
+            progress_observe_bottom: gui.textbuf.make_static_text(c"Look at the bottom screen."),
+            header_text_finished: gui.textbuf.make_static_text(c"Finished!"),
+            finished_line: gui
+                .textbuf
+                .make_static_text(c"Your notes have been migrated."),
+            apt,
+            gfx,
+            hid,
+            gui,
+        }
+    }
+
+    pub fn run(self, extdata: ExtdataArchive, mapping: OldToNewPIDMapping) -> Result<(), ()> {
+        loop {
+            Services::process(self.apt, self.gfx, self.hid)?;
+            self.paint_ready_page();
+
+            if self.hid.keys_down().contains(KeyPad::A) {
+                break;
+            }
+        }
+
+        self.paint_progess_page();
+        Self::do_rewrite(extdata, mapping);
+
+        loop {
+            Services::process(self.apt, self.gfx, self.hid)?;
+            self.paint_done_page();
+
+            if self.hid.keys_down().contains(KeyPad::A) {
+                break;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn do_rewrite(extdata: ExtdataArchive, mapping: OldToNewPIDMapping) {
+        println!("Reading manage.bin...");
+        let mut manage = BPK1Blocks::new_from_bpk1_bytes(&extdata.read_manage()).unwrap();
+        let cominf = manage
+            .iter_mut()
+            .find(|k| k.name.as_bytes() == b"COMINF0")
+            .expect("manage.bin should have a COMINF0, but it doesn't!");
+
+        let mut cursor = Cursor::new(&mut cominf.data);
+
+        let count = cursor.read_u32_le().unwrap();
+        cursor.set_position(0x40);
+        for _ in 0..count {
+            let pos = cursor.position();
+            let sender_pid = common1::CommonInfo::from_bytes(
+                &(cursor.read_const_num_of_bytes::<0x40>().unwrap()),
+            )
+            .unwrap()
+            .sender_pid;
+
+            if let Some(new_pid) = mapping.get(&sender_pid) {
+                let letter_key = cursor.read_u32_le().unwrap();
+                cursor.set_position(pos + 24);
+                cursor.write_all(&u32::to_le_bytes(*new_pid)).unwrap();
+
+                let mut letter =
+                    BPK1Blocks::new_from_bpk1_bytes(&extdata.read_letter_index(letter_key))
+                        .unwrap();
+                let common_block = match letter.iter_mut().find(|k| k.name.as_bytes() == b"COMMON1")
+                {
+                    Some(k) => k,
+                    None => continue,
+                };
+
+                common_block.data[24..28].copy_from_slice(&u32::to_le_bytes(*new_pid));
+
+                let out = BPK1Blocks::bytes_from_bpk1_blocks(letter).unwrap();
+
+                extdata.write_letter_index(letter_key, &out);
+            }
+
+            cursor.set_position(pos + 0x80);
+        }
+
+        println!("Rewriting manage.bin...");
+        extdata.write_file(
+            "/letter/manage.bin",
+            &(BPK1Blocks::bytes_from_bpk1_blocks(manage).unwrap()),
+        );
+        println!("Rewrote manage.bin.");
+    }
+
     pub fn paint_ready_page(&self) {
         self.gui.begin_frame();
         self.gui.header(&self.header_text);

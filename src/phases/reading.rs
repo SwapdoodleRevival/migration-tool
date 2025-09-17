@@ -4,7 +4,7 @@ use std::{
 };
 
 use citro2d_sys::{C2D_AlignCenter, C2D_AlignLeft, C2D_Text};
-use ctru::prelude::KeyPad;
+use ctru::prelude::{Apt, Gfx, Hid, KeyPad};
 use libdoodle::{
     blocks::{common1, miistd1::MiiData},
     bpk1::{BPK1Blocks, BPK1File},
@@ -24,133 +24,8 @@ pub struct ReadResult {
     pub doodles: MiiMap,
 }
 
-pub fn reading(s: &mut Services) -> Result<(ExtdataArchive, ReadResult), ()> {
-    s.console.clear();
-
-    let mut picker = ExtdataPicker::new(s.gui);
-
-    let scene = Scene {
-        header_text: s.gui.textbuf.make_static_text(c"Confirm save data"),
-        no_extdata: s
-            .gui
-            .textbuf
-            .make_static_text(c"It appears you do not have any Swapdoodle extdata."),
-        error_lmk: s
-            .gui
-            .textbuf
-            .make_static_text(c"If you believe this is in error, please let us know!"),
-        exit: s.gui.textbuf.make_static_text(c"Press \u{E000} to exit"),
-        begin_reading: s
-            .gui
-            .textbuf
-            .make_static_text(c"Press \u{E000} to begin reading."),
-        detected_one_reg: s.gui.textbuf.make_static_text(c"Detected region:"),
-        detected_more_reg: s.gui.textbuf.make_static_text(c"Detected several regions."),
-        detected_more_reg_line1: s
-            .gui
-            .textbuf
-            .make_static_text(c"This tool can only work with one at a time."),
-        detected_more_reg_line2: s.gui.textbuf.make_static_text(c"Please select a region:"),
-        reg_eu: s.gui.textbuf.make_static_text(c"Europe"),
-        reg_us: s.gui.textbuf.make_static_text(c"USA"),
-        reg_jp: s.gui.textbuf.make_static_text(c"Japan"),
-        gui: s.gui,
-    };
-
-    if picker.none_available() {
-        loop {
-            Services::process(s.apt, s.gfx, s.hid)?;
-            scene.begin_paint();
-            scene.paint_no_extdata();
-            scene.end_paint();
-
-            if s.hid.keys_down().contains(KeyPad::A) {
-                return Err(());
-            }
-        }
-    }
-
-    let extdata;
-
-    if picker.single_available() {
-        extdata = picker.available_archives.pop().unwrap();
-
-        loop {
-            Services::process(s.apt, s.gfx, s.hid)?;
-            scene.begin_paint();
-            scene.paint_single_extdata(&extdata.region);
-            scene.end_paint();
-
-            if s.hid.keys_down().contains(KeyPad::A) {
-                break;
-            }
-        }
-    } else {
-        let mut view = ScrollableView::new(&picker, 0.0, 100.0, 120.0, TOP_SCREEN_WIDTH, 20.0);
-
-        loop {
-            scene.begin_paint();
-            scene.paint_several_extdata();
-            view.render(s.gui);
-            scene.end_paint();
-
-            Services::process(s.apt, s.gfx, s.hid)?;
-
-            if s.hid.keys_down().contains(KeyPad::DPAD_UP) {
-                view.up();
-            } else if s.hid.keys_down().contains(KeyPad::DPAD_DOWN) {
-                view.down();
-            }
-
-            if s.hid.keys_down().contains(KeyPad::A) {
-                extdata = picker.available_archives.swap_remove(view.current());
-                break;
-            }
-        }
-    }
-
-    let (friends, doodles) = friendly_read_data(&extdata);
-
-    if friends.len() == 1 {
-        println!("Your friend list is empty.");
-        println!();
-        println!("Swapdoodle notes are tied to friend data.");
-        println!("I hope this doesn't sound rude, but here goes:");
-        println!("If you don't have friends, there is not much we can do.");
-        println!();
-        println!("Feel free to re-run this tool later!");
-        println!();
-        println!("If you believe this is in error, please let us know!");
-        println!();
-        println!("Press (A) to exit.");
-
-        loop {
-            Services::process(s.apt, s.gfx, s.hid)?;
-
-            if s.hid.keys_down().contains(KeyPad::A) {
-                return Err(());
-            }
-        }
-    }
-
-    if doodles.is_empty() {
-        println!("We didn't find any notes from an unknown sender.");
-        println!("You shouldn't need to run this tool.");
-        println!();
-        println!("If you believe this is in error, please let us know!");
-        println!();
-        println!("Press (A) to exit.");
-
-        loop {
-            Services::process(s.apt, s.gfx, s.hid)?;
-
-            if s.hid.keys_down().contains(KeyPad::A) {
-                return Err(());
-            }
-        }
-    }
-
-    Ok((extdata, ReadResult { friends, doodles }))
+pub fn reading<'a>(apt: &'a Apt, gfx: &'a Gfx, hid: &'a mut Hid, gui: &'a mut Gui) -> Scene<'a> {
+    Scene::new(apt, gfx, hid, gui)
 }
 
 fn friendly_read_data(extdata: &ExtdataArchive) -> (MiiMap, MiiMap) {
@@ -209,8 +84,7 @@ fn friendly_read_data(extdata: &ExtdataArchive) -> (MiiMap, MiiMap) {
     (friends, doodles)
 }
 
-struct Scene<'a> {
-    gui: &'a Gui,
+pub struct Scene<'a> {
     header_text: C2D_Text,
     no_extdata: C2D_Text,
     error_lmk: C2D_Text,
@@ -223,9 +97,141 @@ struct Scene<'a> {
     reg_jp: C2D_Text,
     exit: C2D_Text,
     begin_reading: C2D_Text,
+    apt: &'a Apt,
+    gfx: &'a Gfx,
+    hid: &'a mut Hid,
+    gui: &'a mut Gui,
 }
 
 impl<'a> Scene<'a> {
+    pub fn new(apt: &'a Apt, gfx: &'a Gfx, hid: &'a mut Hid, gui: &'a mut Gui) -> Self {
+        Scene {
+            header_text: gui.textbuf.make_static_text(c"Confirm save data"),
+            no_extdata: gui
+                .textbuf
+                .make_static_text(c"It appears you do not have any Swapdoodle extdata."),
+            error_lmk: gui
+                .textbuf
+                .make_static_text(c"If you believe this is in error, please let us know!"),
+            exit: gui.textbuf.make_static_text(c"Press \u{E000} to exit"),
+            begin_reading: gui
+                .textbuf
+                .make_static_text(c"Press \u{E000} to begin reading."),
+            detected_one_reg: gui.textbuf.make_static_text(c"Detected region:"),
+            detected_more_reg: gui.textbuf.make_static_text(c"Detected several regions."),
+            detected_more_reg_line1: gui
+                .textbuf
+                .make_static_text(c"This tool can only work with one at a time."),
+            detected_more_reg_line2: gui.textbuf.make_static_text(c"Please select a region:"),
+            reg_eu: gui.textbuf.make_static_text(c"Europe"),
+            reg_us: gui.textbuf.make_static_text(c"USA"),
+            reg_jp: gui.textbuf.make_static_text(c"Japan"),
+            apt,
+            gfx,
+            hid,
+            gui,
+        }
+    }
+
+    pub fn run(self) -> Result<(ExtdataArchive, ReadResult), ()> {
+        let mut picker = ExtdataPicker::new(self.gui);
+
+        if picker.none_available() {
+            loop {
+                Services::process(self.apt, self.gfx, self.hid)?;
+                self.begin_paint();
+                self.paint_no_extdata();
+                self.end_paint();
+
+                if self.hid.keys_down().contains(KeyPad::A) {
+                    return Err(());
+                }
+            }
+        }
+
+        let extdata;
+
+        if picker.single_available() {
+            extdata = picker.available_archives.pop().unwrap();
+
+            loop {
+                Services::process(self.apt, self.gfx, self.hid)?;
+                self.begin_paint();
+                self.paint_single_extdata(&extdata.region);
+                self.end_paint();
+
+                if self.hid.keys_down().contains(KeyPad::A) {
+                    break;
+                }
+            }
+        } else {
+            let mut view = ScrollableView::new(&picker, 0.0, 100.0, 120.0, TOP_SCREEN_WIDTH, 20.0);
+
+            loop {
+                self.begin_paint();
+                self.paint_several_extdata();
+                view.render(self.gui);
+                self.end_paint();
+
+                Services::process(self.apt, self.gfx, self.hid)?;
+
+                if self.hid.keys_down().contains(KeyPad::DPAD_UP) {
+                    view.up();
+                } else if self.hid.keys_down().contains(KeyPad::DPAD_DOWN) {
+                    view.down();
+                }
+
+                if self.hid.keys_down().contains(KeyPad::A) {
+                    extdata = picker.available_archives.swap_remove(view.current());
+                    break;
+                }
+            }
+        }
+
+        let (friends, doodles) = friendly_read_data(&extdata);
+
+        if friends.len() == 1 {
+            println!("Your friend list is empty.");
+            println!();
+            println!("Swapdoodle notes are tied to friend data.");
+            println!("I hope this doesn't sound rude, but here goes:");
+            println!("If you don't have friends, there is not much we can do.");
+            println!();
+            println!("Feel free to re-run this tool later!");
+            println!();
+            println!("If you believe this is in error, please let us know!");
+            println!();
+            println!("Press (A) to exit.");
+
+            loop {
+                Services::process(self.apt, self.gfx, self.hid)?;
+
+                if self.hid.keys_down().contains(KeyPad::A) {
+                    return Err(());
+                }
+            }
+        }
+
+        if doodles.is_empty() {
+            println!("We didn't find any notes from an unknown sender.");
+            println!("You shouldn't need to run this tool.");
+            println!();
+            println!("If you believe this is in error, please let us know!");
+            println!();
+            println!("Press (A) to exit.");
+
+            loop {
+                Services::process(self.apt, self.gfx, self.hid)?;
+
+                if self.hid.keys_down().contains(KeyPad::A) {
+                    return Err(());
+                }
+            }
+        }
+
+        Ok((extdata, ReadResult { friends, doodles }))
+    }
+
     pub fn begin_paint(&self) {
         self.gui.begin_frame();
         self.gui.header(&self.header_text);

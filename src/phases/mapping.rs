@@ -17,193 +17,12 @@ use crate::{
 //                                v      .- PID of friend
 pub type OldToNewPIDMapping = HashMap<u32, u32>;
 
-pub fn mapping(s: &mut Services, read: ReadResult) -> Result<OldToNewPIDMapping, ()> {
-    let mapping = RefCell::new(OldToNewPIDMapping::new());
-    auto_match_by_mac(&mut mapping.borrow_mut(), &read);
-
-    let mut names = HashMap::<u32, C2D_Text>::new();
-    for (pid, mii) in read.doodles.iter() {
-        names.insert(
-            *pid,
-            s.gui
-                .textbuf
-                .make_static_text(&CString::from_str(&mii.mii_name).unwrap_or_default()),
-        );
-    }
-    for (pid, mii) in read.friends.iter() {
-        names.insert(
-            *pid,
-            s.gui
-                .textbuf
-                .make_static_text(&CString::from_str(&mii.mii_name).unwrap_or_default()),
-        );
-    }
-
-    let txt_dont_map = s.gui.textbuf.make_static_text(c"<don't map>");
-
-    let mut scene = Scene {
-        header_text: s.gui.textbuf.make_static_text(c"Mapping"),
-        explanation_line1: s
-            .gui
-            .textbuf
-            .make_static_text(c"The migration tool has attempted to automatically"),
-        explanation_line2: s
-            .gui
-            .textbuf
-            .make_static_text(c"match unknown Doodle authors to your friends."),
-        explanation_line3: s
-            .gui
-            .textbuf
-            .make_static_text(c"You can change the suggested mapping"),
-        explanation_line4: s
-            .gui
-            .textbuf
-            .make_static_text(c"before you begin the migration."),
-        explanation_line5: s
-            .gui
-            .textbuf
-            .make_static_text(c"Highlight a mapping with \u{E07D} "),
-        explanation_line6: s
-            .gui
-            .textbuf
-            .make_static_text(c"and press \u{E000} to change it."),
-        press_a_continue: s
-            .gui
-            .textbuf
-            .make_static_text(c"Press \u{E000} to continue"),
-        press_b_back: s.gui.textbuf.make_static_text(c"\u{E001} Back"),
-        press_x_clear: s.gui.textbuf.make_static_text(c"\u{E002} Clear"),
-        press_y_done: s.gui.textbuf.make_static_text(c"\u{E003} Finish"),
-        remapping: s.gui.textbuf.make_static_text(c"Remapping"),
-        section_doodles: s.gui.textbuf.make_static_text(c"Doodle pals"),
-        section_friends: s.gui.textbuf.make_static_text(c"3DS Friends"),
-        gui: s.gui,
-    };
-
-    loop {
-        Services::process(s.apt, s.gfx, s.hid)?;
-        scene.begin_paint();
-        scene.dialog_explanation();
-        scene.end_paint();
-
-        if s.hid.keys_down().contains(KeyPad::A) {
-            break;
-        }
-    }
-
-    pick_mapping(
-        s.apt,
-        s.gfx,
-        s.hid,
-        &mut scene,
-        &names,
-        txt_dont_map,
-        &read,
-        &mapping,
-    )?;
-
-    Ok(mapping.into_inner())
+pub fn mapping<'a>(apt: &'a Apt, gfx: &'a Gfx, hid: &'a mut Hid, gui: &'a mut Gui) -> Scene<'a> {
+    Scene::new(apt, gfx, hid, gui)
 }
 
-fn auto_match_by_mac(mapping: &mut OldToNewPIDMapping, read: &ReadResult) {
-    for doodler in &read.doodles {
-        let mac = doodler.1.creator_mac_address;
-        for friend in &read.friends {
-            if friend.1.creator_mac_address == mac {
-                mapping.insert(*doodler.0, *friend.0);
-                break;
-            }
-        }
-    }
-}
-
-fn pick_mapping(
-    apt: &Apt,
-    gfx: &Gfx,
-    hid: &mut Hid,
-    scene: &mut Scene,
-    names: &HashMap<u32, C2D_Text>,
-    txt_dont_map: C2D_Text,
-    read: &ReadResult,
-    mapping: &RefCell<OldToNewPIDMapping>,
-) -> Result<(), ()> {
-    let mapping_picker = MappingPicker::new(mapping, &read.doodles, names, &txt_dont_map);
-    let friends_picker = FriendPicker::new(&read.friends, &names);
-
-    let mut view = ScrollableView::new(&mapping_picker, 0.0, 20.0, 200.0, TOP_SCREEN_WIDTH, 20.0);
-
-    loop {
-        Services::process(apt, gfx, hid)?;
-        scene.begin_paint();
-        scene.paint_mapping();
-        view.render(scene.gui);
-        scene.end_paint();
-
-        if hid.keys_down().contains(KeyPad::DPAD_DOWN) {
-            view.down();
-        } else if hid.keys_down().contains(KeyPad::DPAD_UP) {
-            view.up();
-        } else if hid.keys_down().contains(KeyPad::A) {
-            let pid = *read
-                .doodles
-                .iter()
-                .enumerate()
-                .find(|i| i.0 == view.current())
-                .unwrap()
-                .1
-                .0;
-            pick_friend(apt, gfx, hid, scene, &friends_picker, pid, read, mapping)?;
-        } else if hid.keys_down().contains(KeyPad::Y) {
-            return Ok(());
-        }
-    }
-}
-
-fn pick_friend(
-    apt: &Apt,
-    gfx: &Gfx,
-    hid: &mut Hid,
-    scene: &mut Scene,
-    picker: &FriendPicker,
-    pid: u32,
-    read: &ReadResult,
-    mapping: &RefCell<OldToNewPIDMapping>,
-) -> Result<(), ()> {
-    let mut view = ScrollableView::new(picker, 0.0, 20.0, 200.0, TOP_SCREEN_WIDTH, 20.0);
-
-    loop {
-        Services::process(apt, gfx, hid)?;
-        scene.begin_paint();
-        scene.paint_remapping(pid, picker.pid_name_texts);
-        view.render(scene.gui);
-        scene.end_paint();
-
-        if hid.keys_down().contains(KeyPad::DPAD_DOWN) {
-            view.down();
-        } else if hid.keys_down().contains(KeyPad::DPAD_UP) {
-            view.up();
-        } else if hid.keys_down().contains(KeyPad::A) {
-            let new_pid = *read
-                .friends
-                .iter()
-                .enumerate()
-                .find(|i| i.0 == view.current())
-                .unwrap()
-                .1
-                .0;
-            mapping.borrow_mut().insert(pid, new_pid);
-            return Ok(());
-        } else if hid.keys_down().contains(KeyPad::X) {
-            mapping.borrow_mut().remove(&pid);
-            return Ok(());
-        } else if hid.keys_down().contains(KeyPad::B) {
-            return Ok(());
-        }
-    }
-}
-
-struct Scene<'a> {
-    gui: &'a Gui,
+pub struct Scene<'a> {
+    names: HashMap<u32, C2D_Text>,
     header_text: C2D_Text,
     explanation_line1: C2D_Text,
     explanation_line2: C2D_Text,
@@ -217,10 +36,181 @@ struct Scene<'a> {
     press_b_back: C2D_Text,
     section_doodles: C2D_Text,
     section_friends: C2D_Text,
+    dont_map: C2D_Text,
     remapping: C2D_Text,
+    apt: &'a Apt,
+    gfx: &'a Gfx,
+    hid: &'a mut Hid,
+    gui: &'a mut Gui,
 }
 
 impl<'a> Scene<'a> {
+    fn new(apt: &'a Apt, gfx: &'a Gfx, hid: &'a mut Hid, gui: &'a mut Gui) -> Self {
+        Scene {
+            names: HashMap::<u32, C2D_Text>::new(),
+            header_text: gui.textbuf.make_static_text(c"Mapping"),
+            explanation_line1: gui
+                .textbuf
+                .make_static_text(c"The migration tool has attempted to automatically"),
+            explanation_line2: gui
+                .textbuf
+                .make_static_text(c"match unknown Doodle authors to your friends."),
+            explanation_line3: gui
+                .textbuf
+                .make_static_text(c"You can change the suggested mapping"),
+            explanation_line4: gui
+                .textbuf
+                .make_static_text(c"before you begin the migration."),
+            explanation_line5: gui
+                .textbuf
+                .make_static_text(c"Highlight a mapping with \u{E07D} "),
+            explanation_line6: gui
+                .textbuf
+                .make_static_text(c"and press \u{E000} to change it."),
+            press_a_continue: gui.textbuf.make_static_text(c"Press \u{E000} to continue"),
+            press_b_back: gui.textbuf.make_static_text(c"\u{E001} Back"),
+            press_x_clear: gui.textbuf.make_static_text(c"\u{E002} Clear"),
+            press_y_done: gui.textbuf.make_static_text(c"\u{E003} Finish"),
+            remapping: gui.textbuf.make_static_text(c"Remapping"),
+            section_doodles: gui.textbuf.make_static_text(c"Doodle pals"),
+            section_friends: gui.textbuf.make_static_text(c"3DS Friends"),
+            dont_map: gui.textbuf.make_static_text(c"<don't map>"),
+            apt,
+            gfx,
+            hid,
+            gui,
+        }
+    }
+
+    pub fn run(mut self, read: ReadResult) -> Result<OldToNewPIDMapping, ()> {
+        let mapping = RefCell::new(OldToNewPIDMapping::new());
+
+        Self::auto_match_by_mac(&mapping, &read);
+
+        for (pid, mii) in read.doodles.iter() {
+            self.names.insert(
+                *pid,
+                self.gui
+                    .textbuf
+                    .make_static_text(&CString::from_str(&mii.mii_name).unwrap_or_default()),
+            );
+        }
+        for (pid, mii) in read.friends.iter() {
+            self.names.insert(
+                *pid,
+                self.gui
+                    .textbuf
+                    .make_static_text(&CString::from_str(&mii.mii_name).unwrap_or_default()),
+            );
+        }
+
+        loop {
+            Services::process(self.apt, self.gfx, self.hid)?;
+            self.begin_paint();
+            self.dialog_explanation();
+            self.end_paint();
+
+            if self.hid.keys_down().contains(KeyPad::A) {
+                break;
+            }
+        }
+
+        self.mapping_editor(&mapping, &read)?;
+
+        Ok(mapping.into_inner())
+    }
+
+    fn auto_match_by_mac(mapping: &RefCell<OldToNewPIDMapping>, read: &ReadResult) {
+        let mut mapping = mapping.borrow_mut();
+        for doodler in &read.doodles {
+            let mac = doodler.1.creator_mac_address;
+            for friend in &read.friends {
+                if friend.1.creator_mac_address == mac {
+                    mapping.insert(*doodler.0, *friend.0);
+                    break;
+                }
+            }
+        }
+    }
+
+    fn mapping_editor(
+        &mut self,
+        mapping: &RefCell<OldToNewPIDMapping>,
+        read: &ReadResult,
+    ) -> Result<(), ()> {
+        let mapping_picker =
+            MappingPicker::new(mapping, &read.doodles, &self.names, &self.dont_map);
+        let friends_picker = FriendPicker::new(&read.friends, &self.names);
+
+        let mut view =
+            ScrollableView::new(&mapping_picker, 0.0, 20.0, 200.0, TOP_SCREEN_WIDTH, 20.0);
+
+        loop {
+            Services::process(self.apt, self.gfx, self.hid)?;
+            self.begin_paint();
+            self.paint_mapping();
+            view.render(self.gui);
+            self.end_paint();
+
+            if self.hid.keys_down().contains(KeyPad::DPAD_DOWN) {
+                view.down();
+            } else if self.hid.keys_down().contains(KeyPad::DPAD_UP) {
+                view.up();
+            } else if self.hid.keys_down().contains(KeyPad::A) {
+                let doodle_pal_pid = *read
+                    .doodles
+                    .iter()
+                    .enumerate()
+                    .find(|i| i.0 == view.current())
+                    .unwrap()
+                    .1
+                    .0;
+
+                {
+                    let mut view = ScrollableView::new(
+                        &friends_picker,
+                        0.0,
+                        20.0,
+                        200.0,
+                        TOP_SCREEN_WIDTH,
+                        20.0,
+                    );
+                    loop {
+                        Services::process(self.apt, self.gfx, self.hid)?;
+                        self.begin_paint();
+                        self.paint_remapping(doodle_pal_pid, friends_picker.pid_name_texts);
+                        view.render(self.gui);
+                        self.end_paint();
+
+                        if self.hid.keys_down().contains(KeyPad::DPAD_DOWN) {
+                            view.down();
+                        } else if self.hid.keys_down().contains(KeyPad::DPAD_UP) {
+                            view.up();
+                        } else if self.hid.keys_down().contains(KeyPad::A) {
+                            let new_pid = *read
+                                .friends
+                                .iter()
+                                .enumerate()
+                                .find(|i| i.0 == view.current())
+                                .unwrap()
+                                .1
+                                .0;
+                            mapping.borrow_mut().insert(doodle_pal_pid, new_pid);
+                            break;
+                        } else if self.hid.keys_down().contains(KeyPad::X) {
+                            mapping.borrow_mut().remove(&doodle_pal_pid);
+                            break;
+                        } else if self.hid.keys_down().contains(KeyPad::B) {
+                            break;
+                        }
+                    }
+                }
+            } else if self.hid.keys_down().contains(KeyPad::Y) {
+                return Ok(());
+            }
+        }
+    }
+
     pub fn begin_paint(&self) {
         self.gui.begin_frame();
         self.gui.header_small(&self.header_text);

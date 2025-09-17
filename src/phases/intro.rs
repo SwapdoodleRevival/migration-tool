@@ -3,57 +3,13 @@ use crate::{
     gui::{Gui, TOP_SCREEN_WIDTH, TextBufferManager},
 };
 use citro2d_sys::{C2D_AlignCenter, C2D_Text};
-use ctru::prelude::KeyPad;
+use ctru::prelude::{Apt, Gfx, Hid, KeyPad};
 
-pub fn intro(s: &mut Services) -> Result<(), ()> {
-    let scene = Scene {
-        header_text: s.gui.textbuf.make_static_text(c"Swapdoodle Migration Tool"),
-        intro_line1_text: s
-            .gui
-            .textbuf
-            .make_static_text(c"This tool will help you migrate your Swapdoodle notes"),
-        intro_line2_text: s
-            .gui
-            .textbuf
-            .make_static_text(c"from a Nintendo environment to a Pretendo environment."),
-        goal_line1_text: s
-            .gui
-            .textbuf
-            .make_static_text(c"After using this tool, your notes will be moved"),
-        goal_line2_text: s
-            .gui
-            .textbuf
-            .make_static_text(c"from \"Unknown sender\" to your friends' profiles."),
-        nobkp_line1_text: s.gui.textbuf.make_static_text(
-            c"Please note: This tool does not back up your extra data before migrating it!",
-        ),
-        nobkp_line2_text: s.gui.textbuf.make_static_text(
-            c"If you do not have an EXTRA DATA backup, make one now using Checkpoint.",
-        ),
-        nobkp_line3_text: s.gui.textbuf.make_static_text(
-            c"(open Checkpoint, press \u{E002} for extra data, and back up Swapdoodle)",
-        ),
-        begin: s.gui.textbuf.make_static_text(c"Press \u{E000} to begin"),
-        exit: s.gui.textbuf.make_static_text(c"Press Start to exit"),
-        exit_anytime: s
-            .gui
-            .textbuf
-            .make_static_text(c"(you can do this at any point)"),
-        gui: s.gui,
-    };
-
-    loop {
-        Services::process(s.apt, s.gfx, s.hid)?;
-        scene.paint();
-
-        if s.hid.keys_down().contains(KeyPad::A) {
-            return Ok(());
-        }
-    }
+pub fn intro<'a>(apt: &'a Apt, gfx: &'a Gfx, hid: &'a mut Hid, gui: &'a mut Gui) -> Scene<'a> {
+    Scene::new(apt, gfx, hid, gui)
 }
 
-struct Scene<'a> {
-    gui: &'a Gui,
+pub struct Scene<'a> {
     header_text: C2D_Text,
     intro_line1_text: C2D_Text,
     intro_line2_text: C2D_Text,
@@ -65,9 +21,60 @@ struct Scene<'a> {
     begin: C2D_Text,
     exit: C2D_Text,
     exit_anytime: C2D_Text,
+    apt: &'a Apt,
+    gfx: &'a Gfx,
+    hid: &'a mut Hid,
+    gui: &'a mut Gui,
 }
 
 impl<'a> Scene<'a> {
+    fn new(apt: &'a Apt, gfx: &'a Gfx, hid: &'a mut Hid, gui: &'a mut Gui) -> Self {
+        Scene {
+            header_text: gui.textbuf.make_static_text(c"Swapdoodle Migration Tool"),
+            intro_line1_text: gui
+                .textbuf
+                .make_static_text(c"This tool will help you migrate your Swapdoodle notes"),
+            intro_line2_text: gui
+                .textbuf
+                .make_static_text(c"from a Nintendo environment to a Pretendo environment."),
+            goal_line1_text: gui
+                .textbuf
+                .make_static_text(c"After using this tool, your notes will be moved"),
+            goal_line2_text: gui
+                .textbuf
+                .make_static_text(c"from \"Unknown sender\" to your friends' profiles."),
+            nobkp_line1_text: gui.textbuf.make_static_text(
+                c"Please note: This tool does not back up your extra data before migrating it!",
+            ),
+            nobkp_line2_text: gui.textbuf.make_static_text(
+                c"If you do not have an EXTRA DATA backup, make one now using Checkpoint.",
+            ),
+            nobkp_line3_text: gui.textbuf.make_static_text(
+                c"(open Checkpoint, press \u{E002} for extra data, and back up Swapdoodle)",
+            ),
+            begin: gui.textbuf.make_static_text(c"Press \u{E000} to begin"),
+            exit: gui.textbuf.make_static_text(c"Press Start to exit"),
+            exit_anytime: gui
+                .textbuf
+                .make_static_text(c"(you can do this at any point)"),
+            apt,
+            gfx,
+            hid,
+            gui,
+        }
+    }
+
+    pub fn run(self) -> Result<(), ()> {
+        loop {
+            Services::process(self.apt, self.gfx, self.hid)?;
+            self.paint();
+
+            if self.hid.keys_down().contains(KeyPad::A) {
+                return Ok(());
+            }
+        }
+    }
+
     pub fn paint(&self) {
         self.gui.begin_frame();
         self.gui.header(&self.header_text);

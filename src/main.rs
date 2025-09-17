@@ -15,7 +15,6 @@ struct Services<'a> {
     hid: &'a mut Hid,
     gfx: &'a Gfx,
     gui: &'a mut Gui,
-    console: Console<'a>,
 }
 
 impl<'a> Services<'a> {
@@ -41,20 +40,12 @@ fn run() -> Result<(), ()> {
     let apt = Apt::new().unwrap();
     let mut hid = Hid::new().unwrap();
     let gfx: Gfx = Gfx::new().unwrap();
-    let console = Console::new(gfx.bottom_screen.borrow_mut());
+    let _console = Console::new(gfx.bottom_screen.borrow_mut());
     let mut gui = Gui::init();
 
-    let mut services = Services {
-        apt: &apt,
-        gfx: &gfx,
-        hid: &mut hid,
-        gui: &mut gui,
-        console,
-    };
-
-    phases::intro(&mut services)?;
-    let (extdata, read_data) = phases::reading(&mut services)?;
-    let mapping = phases::mapping(&mut services, read_data)?;
-    phases::rewrite(&mut services, extdata, mapping)?;
+    phases::intro(&apt, &gfx, &mut hid, &mut gui).run()?;
+    let (extdata, read_data) = phases::reading(&apt, &gfx, &mut hid, &mut gui).run()?;
+    let mapping = phases::mapping(&apt, &gfx, &mut hid, &mut gui).run(read_data)?;
+    phases::rewrite(&apt, &gfx, &mut hid, &mut gui).run(extdata, mapping)?;
     Ok(())
 }
