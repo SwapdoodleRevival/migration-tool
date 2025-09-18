@@ -1,16 +1,18 @@
-use std::{cmp::min, ffi::CStr, mem, ops::Div};
+pub mod scrollable_view;
+pub mod text;
 
 use citro2d_sys::{
     C2D_AlignCenter, C2D_AtBaseline, C2D_Color32, C2D_CreateScreenTarget, C2D_DEFAULT_MAX_OBJECTS,
     C2D_DrawRectSolid, C2D_DrawText, C2D_Init, C2D_Prepare, C2D_SceneBegin, C2D_TargetClear,
-    C2D_Text, C2D_TextBuf, C2D_TextBufDelete, C2D_TextBufNew, C2D_TextBufResize, C2D_TextOptimize,
-    C2D_TextParse, C2D_WithColor, C3D_RenderTarget,
+    C2D_Text, C2D_WithColor, C3D_RenderTarget,
 };
 use citro3d_sys::{
     C3D_DEFAULT_CMDBUF_SIZE, C3D_FRAME_SYNCDRAW, C3D_FrameBegin, C3D_FrameEnd, C3D_Init,
 };
 use ctru::{GFX_LEFT, GFX_TOP};
 use ctru_sys as ctru;
+
+use crate::gui::text::TextBufferManager;
 
 pub struct Gui {
     pub screen: *mut C3D_RenderTarget,
@@ -133,120 +135,4 @@ impl Gui {
             C3D_FrameEnd(0);
         }
     }
-}
-
-pub struct TextBufferManager {
-    buf: C2D_TextBuf,
-    glyph_count: usize,
-}
-
-impl TextBufferManager {
-    pub fn init(size: usize) -> Self {
-        unsafe {
-            Self {
-                buf: C2D_TextBufNew(size),
-                glyph_count: size,
-            }
-        }
-    }
-
-    pub fn make_static_text(&mut self, content: &CStr) -> C2D_Text {
-        unsafe {
-            let mut text: C2D_Text = mem::zeroed();
-            let end_of_parsing = C2D_TextParse(&mut text as *mut _, self.buf, content.as_ptr());
-            if *end_of_parsing != b'\0' {
-                self.glyph_count *= 2;
-                self.buf = C2D_TextBufResize(self.buf, self.glyph_count);
-                C2D_TextParse(&mut text as *mut _, self.buf, content.as_ptr());
-            }
-            C2D_TextOptimize(&mut text as *mut _);
-            text
-        }
-    }
-}
-
-impl Drop for TextBufferManager {
-    fn drop(&mut self) {
-        unsafe {
-            C2D_TextBufDelete(self.buf);
-        }
-    }
-}
-
-pub struct ScrollableView<'a, T: ScrollableViewData> {
-    data: &'a T,
-    highlighted_item: usize,
-    x: f32,
-    y: f32,
-    height: f32,
-    width: f32,
-    item_height: f32,
-}
-
-impl<'a, T: ScrollableViewData> ScrollableView<'a, T> {
-    pub fn new(data: &'a T, x: f32, y: f32, height: f32, width: f32, item_height: f32) -> Self {
-        Self {
-            data,
-            highlighted_item: 0,
-            x,
-            y,
-            height,
-            width,
-            item_height,
-        }
-    }
-
-    fn max_items_on_screen(&self) -> usize {
-        self.height.div(self.item_height).floor() as usize
-    }
-
-    pub fn up(&mut self) {
-        if self.highlighted_item == 0 {
-            self.highlighted_item = self.data.count_items();
-        }
-        self.highlighted_item = self.highlighted_item.saturating_sub(1);
-    }
-
-    pub fn down(&mut self) {
-        self.highlighted_item = self.highlighted_item.saturating_add(1);
-        if self.highlighted_item == self.data.count_items() {
-            self.highlighted_item = 0;
-        }
-    }
-
-    pub fn current(&self) -> usize {
-        self.highlighted_item
-    }
-
-    pub fn render(&self, gui: &Gui) {
-        let max_items = self.max_items_on_screen();
-        let count_pages = self.data.count_items() / max_items + 1;
-        let current_page = self.highlighted_item / max_items;
-        let page_start = current_page * max_items;
-
-        let mut y = self.y;
-        for index in page_start..page_start + min(self.data.count_items() - page_start, max_items) {
-            if index == self.highlighted_item {
-                gui.rect(self.x, y, self.width, self.item_height, gui.highlight_color);
-            }
-            self.data
-                .render_line(gui, index, self.x, y, self.width, self.item_height);
-            y += self.item_height;
-        }
-
-        gui.rect(self.x, self.y, 5.0, self.height, gui.dialog_overlay);
-        let indicator_height = self.height / count_pages as f32;
-        gui.rect(
-            self.x,
-            self.y + indicator_height * current_page as f32,
-            5.0,
-            indicator_height,
-            gui.highlight_color,
-        );
-    }
-}
-
-pub trait ScrollableViewData {
-    fn render_line(&self, gui: &Gui, index: usize, x: f32, y: f32, width: f32, height: f32);
-    fn count_items(&self) -> usize;
 }
