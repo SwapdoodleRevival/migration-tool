@@ -9,7 +9,7 @@ mod phases;
 mod read;
 
 fn main() {
-    ctru::applets::error::set_panic_hook(true);
+    ctru::set_panic_hook(true);
     _ = run();
 }
 
