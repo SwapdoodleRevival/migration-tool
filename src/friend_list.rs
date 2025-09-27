@@ -41,7 +41,7 @@ unsafe fn get_friend_info(friend_map: &mut MiiMap, handle: Handle) {
         *cmdbuf.wrapping_add(65) = &mut friend_keys[0] as *mut _ as u32;
 
         panic_if_failed!(ctru_sys::svcSendSyncRequest(handle));
-        panic_if_failed!(*cmdbuf.wrapping_add(1) != 0);
+        panic_if_failed!(*cmdbuf.wrapping_add(1));
 
         let num_friends = *cmdbuf.wrapping_add(2);
 
@@ -57,7 +57,7 @@ unsafe fn get_friend_info(friend_map: &mut MiiMap, handle: Handle) {
         *cmdbuf.wrapping_add(7) = &mut friend_info[0] as *mut _ as u32;
 
         panic_if_failed!(ctru_sys::svcSendSyncRequest(handle));
-        panic_if_failed!(*cmdbuf.wrapping_add(1) != 0);
+        panic_if_failed!(*cmdbuf.wrapping_add(1));
 
         for i in 0..num_friends {
             let pid: u32 = friend_keys[i as usize].principalId;
@@ -83,13 +83,12 @@ unsafe fn get_my_info(friend_map: &mut MiiMap, handle: Handle) {
         let cmdbuf = ctru_sys::getThreadCommandBuffer();
         *cmdbuf = 0x00050000;
         panic_if_failed!(ctru_sys::svcSendSyncRequest(handle));
-        panic_if_failed!(*cmdbuf.wrapping_add(1) != 0);
+        panic_if_failed!(*cmdbuf.wrapping_add(1));
         let pid: u32 = *cmdbuf.add(2);
 
         let cmdbuf = ctru_sys::getThreadCommandBuffer();
         *cmdbuf = 0x000A0000;
         panic_if_failed!(ctru_sys::svcSendSyncRequest(handle));
-        panic_if_failed!(*cmdbuf.wrapping_add(1) != 0);
 
         let mut mii: [u8; 0x5C] = mem::zeroed();
         let mut idx = 0usize;
@@ -99,6 +98,7 @@ unsafe fn get_my_info(friend_map: &mut MiiMap, handle: Handle) {
                 idx += 1;
             }
         }
+        panic_if_failed!(*cmdbuf.wrapping_add(1));
 
         friend_map.insert(pid, MiiData::from_bytes(mii).unwrap());
     }
