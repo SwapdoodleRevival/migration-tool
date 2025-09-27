@@ -1,23 +1,17 @@
-use std::io::Write;
-
-use std::io::Cursor;
-
+use crate::{
+    control_flow::MigrationFlow,
+    extdata::ExtdataArchive,
+    gui::{Gui, TOP_SCREEN_HEIGHT, TOP_SCREEN_WIDTH},
+    phases::{OldToNewPIDMapping, process},
+    read::ReadExt,
+};
 use citro2d_sys::{C2D_AlignCenter, C2D_Text};
-use ctru::prelude::Apt;
-use ctru::prelude::Gfx;
-use ctru::prelude::Hid;
-use ctru::prelude::KeyPad;
+use ctru::prelude::*;
 use libdoodle::{
     blocks::common1,
     bpk1::{BPK1Blocks, BPK1File},
 };
-
-use crate::control_flow::MigrationFlow;
-use crate::extdata::ExtdataArchive;
-use crate::gui::{Gui, TOP_SCREEN_HEIGHT, TOP_SCREEN_WIDTH};
-use crate::phases::OldToNewPIDMapping;
-use crate::phases::process;
-use crate::read::ReadExt;
+use std::io::{Cursor, Write};
 
 pub fn rewrite<'a>(apt: &'a Apt, gfx: &'a Gfx, hid: &'a mut Hid, gui: &'a mut Gui) -> Scene<'a> {
     Scene::new(apt, gfx, hid, gui)
