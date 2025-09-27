@@ -5,8 +5,11 @@ use ctru::prelude::{Apt, Gfx, Hid, KeyPad};
 
 use crate::{
     friend_list::MiiMap,
-    gui::{scrollable_view::{ScrollableView, ScrollableViewData}, Gui, TOP_SCREEN_HEIGHT, TOP_SCREEN_WIDTH},
-    phases::{process, MigrationFlow, ReadResult},
+    gui::{
+        Gui, TOP_SCREEN_HEIGHT, TOP_SCREEN_WIDTH,
+        scrollable_view::{ScrollableView, ScrollableViewData},
+    },
+    phases::{MigrationFlow, ReadResult, process},
 };
 
 //                                    .- PID of note sender

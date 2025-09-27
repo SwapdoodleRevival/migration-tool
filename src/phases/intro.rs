@@ -1,4 +1,7 @@
-use crate::{gui::{Gui, TOP_SCREEN_WIDTH}, phases::{process, MigrationFlow}};
+use crate::{
+    gui::{Gui, TOP_SCREEN_WIDTH},
+    phases::{MigrationFlow, process},
+};
 use citro2d_sys::{C2D_AlignCenter, C2D_Text};
 use ctru::prelude::{Apt, Gfx, Hid, KeyPad};
 

@@ -12,7 +12,7 @@ pub use mapping::*;
 pub use reading::*;
 pub use rewrite::*;
 
-pub type MigrationFlow<T = ()> = ControlFlow<(), T>; 
+pub type MigrationFlow<T = ()> = ControlFlow<(), T>;
 
 fn process(apt: &Apt, gfx: &Gfx, hid: &mut Hid) -> MigrationFlow {
     if !apt.main_loop() {

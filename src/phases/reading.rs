@@ -12,7 +12,14 @@ use libdoodle::{
 };
 
 use crate::{
-    extdata::{ExtdataArchive, SwapdoodleRegion}, friend_list::{self, MiiMap}, gui::{scrollable_view::{ScrollableView, ScrollableViewData}, Gui, TOP_SCREEN_WIDTH}, phases::{process, MigrationFlow}, read::ReadExt
+    extdata::{ExtdataArchive, SwapdoodleRegion},
+    friend_list::{self, MiiMap},
+    gui::{
+        Gui, TOP_SCREEN_WIDTH,
+        scrollable_view::{ScrollableView, ScrollableViewData},
+    },
+    phases::{MigrationFlow, process},
+    read::ReadExt,
 };
 
 pub struct ReadResult {
