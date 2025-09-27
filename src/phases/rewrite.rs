@@ -14,6 +14,7 @@ use libdoodle::{
 
 use crate::extdata::ExtdataArchive;
 use crate::gui::{Gui, TOP_SCREEN_HEIGHT, TOP_SCREEN_WIDTH};
+use crate::phases::MigrationFlow;
 use crate::phases::OldToNewPIDMapping;
 use crate::phases::process;
 use crate::read::ReadExt;
@@ -73,7 +74,7 @@ impl<'a> Scene<'a> {
         }
     }
 
-    pub fn run(self, extdata: ExtdataArchive, mapping: OldToNewPIDMapping) -> Result<(), ()> {
+    pub fn run(self, extdata: ExtdataArchive, mapping: OldToNewPIDMapping) -> MigrationFlow {
         loop {
             process(self.apt, self.gfx, self.hid)?;
             self.paint_ready_page();
@@ -95,7 +96,7 @@ impl<'a> Scene<'a> {
             }
         }
 
-        Ok(())
+        MigrationFlow::Continue(())
     }
 
     fn do_rewrite(extdata: ExtdataArchive, mapping: OldToNewPIDMapping) {

@@ -1,6 +1,6 @@
 use ctru::prelude::*;
 
-use crate::gui::Gui;
+use crate::{gui::Gui, phases::MigrationFlow};
 
 mod extdata;
 mod friend_list;
@@ -13,7 +13,7 @@ fn main() {
     _ = run();
 }
 
-fn run() -> Result<(), ()> {
+fn run() -> MigrationFlow {
     let apt = Apt::new().unwrap();
     let mut hid = Hid::new().unwrap();
     let gfx: Gfx = Gfx::new().unwrap();
@@ -24,5 +24,5 @@ fn run() -> Result<(), ()> {
     let (extdata, read_data) = phases::reading(&apt, &gfx, &mut hid, &mut gui).run()?;
     let mapping = phases::mapping(&apt, &gfx, &mut hid, &mut gui).run(read_data)?;
     phases::rewrite(&apt, &gfx, &mut hid, &mut gui).run(extdata, mapping)?;
-    Ok(())
+    MigrationFlow::Continue(())
 }

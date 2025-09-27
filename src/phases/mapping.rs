@@ -6,7 +6,7 @@ use ctru::prelude::{Apt, Gfx, Hid, KeyPad};
 use crate::{
     friend_list::MiiMap,
     gui::{scrollable_view::{ScrollableView, ScrollableViewData}, Gui, TOP_SCREEN_HEIGHT, TOP_SCREEN_WIDTH},
-    phases::{process, ReadResult},
+    phases::{process, MigrationFlow, ReadResult},
 };
 
 //                                    .- PID of note sender
@@ -78,7 +78,7 @@ impl<'a> Scene<'a> {
         }
     }
 
-    pub fn run(mut self, read: ReadResult) -> Result<OldToNewPIDMapping, ()> {
+    pub fn run(mut self, read: ReadResult) -> MigrationFlow<OldToNewPIDMapping> {
         let mapping = RefCell::new(OldToNewPIDMapping::new());
 
         Self::auto_match_by_mac(&mapping, &read);
@@ -113,7 +113,7 @@ impl<'a> Scene<'a> {
 
         self.mapping_editor(&mapping, &read)?;
 
-        Ok(mapping.into_inner())
+        MigrationFlow::Continue(mapping.into_inner())
     }
 
     fn auto_match_by_mac(mapping: &RefCell<OldToNewPIDMapping>, read: &ReadResult) {
@@ -133,7 +133,7 @@ impl<'a> Scene<'a> {
         &mut self,
         mapping: &RefCell<OldToNewPIDMapping>,
         read: &ReadResult,
-    ) -> Result<(), ()> {
+    ) -> MigrationFlow {
         let mapping_picker =
             MappingPicker::new(mapping, &read.doodles, &self.names, &self.dont_map);
         let friends_picker = FriendPicker::new(&read.friends, &self.names);
@@ -202,7 +202,7 @@ impl<'a> Scene<'a> {
                     }
                 }
             } else if self.hid.keys_down().contains(KeyPad::Y) {
-                return Ok(());
+                return MigrationFlow::Continue(());
             }
         }
     }

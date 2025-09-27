@@ -12,7 +12,7 @@ use libdoodle::{
 };
 
 use crate::{
-    extdata::{ExtdataArchive, SwapdoodleRegion}, friend_list::{self, MiiMap}, gui::{scrollable_view::{ScrollableView, ScrollableViewData}, Gui, TOP_SCREEN_WIDTH}, phases::process, read::ReadExt
+    extdata::{ExtdataArchive, SwapdoodleRegion}, friend_list::{self, MiiMap}, gui::{scrollable_view::{ScrollableView, ScrollableViewData}, Gui, TOP_SCREEN_WIDTH}, phases::{process, MigrationFlow}, read::ReadExt
 };
 
 pub struct ReadResult {
@@ -129,7 +129,7 @@ impl<'a> Scene<'a> {
         }
     }
 
-    pub fn run(self) -> Result<(ExtdataArchive, ReadResult), ()> {
+    pub fn run(self) -> MigrationFlow<(ExtdataArchive, ReadResult)> {
         let mut picker = ExtdataPicker::new(self.gui);
 
         if picker.none_available() {
@@ -140,7 +140,7 @@ impl<'a> Scene<'a> {
                 self.end_paint();
 
                 if self.hid.keys_down().contains(KeyPad::A) {
-                    return Err(());
+                    return MigrationFlow::Break(());
                 }
             }
         }
@@ -203,7 +203,7 @@ impl<'a> Scene<'a> {
                 process(self.apt, self.gfx, self.hid)?;
 
                 if self.hid.keys_down().contains(KeyPad::A) {
-                    return Err(());
+                    return MigrationFlow::Break(());
                 }
             }
         }
@@ -220,12 +220,12 @@ impl<'a> Scene<'a> {
                 process(self.apt, self.gfx, self.hid)?;
 
                 if self.hid.keys_down().contains(KeyPad::A) {
-                    return Err(());
+                    return MigrationFlow::Break(());
                 }
             }
         }
 
-        Ok((extdata, ReadResult { friends, doodles }))
+        MigrationFlow::Continue((extdata, ReadResult { friends, doodles }))
     }
 
     pub fn begin_paint(&self) {
