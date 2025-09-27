@@ -3,6 +3,7 @@ use ctru::prelude::*;
 use std::process::{ExitCode, Termination};
 
 mod control_flow;
+pub(crate) mod error;
 mod extdata;
 mod friend_list;
 mod gui;

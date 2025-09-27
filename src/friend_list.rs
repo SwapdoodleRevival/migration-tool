@@ -6,6 +6,8 @@ use ctru_sys::{FriendInfo, FriendKey, Handle};
 use libdoodle::blocks::miistd1::MiiData;
 use std::{collections::HashMap, mem};
 
+use crate::error::panic_if_failed;
+
 pub type MiiMap = HashMap<u32, MiiData>;
 
 const FRIEND_LIST_SIZE: u32 = 100; // max number of friends is 100
@@ -38,11 +40,8 @@ unsafe fn get_friend_info(friend_map: &mut MiiMap, handle: Handle) {
         *cmdbuf.wrapping_add(64) = (FRIEND_LIST_SIZE << 18) | 2;
         *cmdbuf.wrapping_add(65) = &mut friend_keys[0] as *mut _ as u32;
 
-        _ = ctru_sys::svcSendSyncRequest(handle);
-
-        if *cmdbuf.wrapping_add(1) != 0 {
-            panic!("Something went wrong")
-        }
+        panic_if_failed!(ctru_sys::svcSendSyncRequest(handle));
+        panic_if_failed!(*cmdbuf.wrapping_add(1) != 0);
 
         let num_friends = *cmdbuf.wrapping_add(2);
 
@@ -57,11 +56,8 @@ unsafe fn get_friend_info(friend_map: &mut MiiMap, handle: Handle) {
             (num_friends * mem::size_of::<FriendInfo>() as u32) << 4 | 0x8 | 0b100;
         *cmdbuf.wrapping_add(7) = &mut friend_info[0] as *mut _ as u32;
 
-        _ = ctru_sys::svcSendSyncRequest(handle);
-
-        if *cmdbuf.wrapping_add(1) != 0 {
-            panic!("Something went wrong")
-        }
+        panic_if_failed!(ctru_sys::svcSendSyncRequest(handle));
+        panic_if_failed!(*cmdbuf.wrapping_add(1) != 0);
 
         for i in 0..num_friends {
             let pid: u32 = friend_keys[i as usize].principalId;
@@ -86,20 +82,14 @@ unsafe fn get_my_info(friend_map: &mut MiiMap, handle: Handle) {
     unsafe {
         let cmdbuf = ctru_sys::getThreadCommandBuffer();
         *cmdbuf = 0x00050000;
-        _ = ctru_sys::svcSendSyncRequest(handle);
+        panic_if_failed!(ctru_sys::svcSendSyncRequest(handle));
+        panic_if_failed!(*cmdbuf.wrapping_add(1) != 0);
         let pid: u32 = *cmdbuf.add(2);
-
-        if *cmdbuf.wrapping_add(1) != 0 {
-            panic!("Something went wrong")
-        }
 
         let cmdbuf = ctru_sys::getThreadCommandBuffer();
         *cmdbuf = 0x000A0000;
-        _ = ctru_sys::svcSendSyncRequest(handle);
-
-        if *cmdbuf.wrapping_add(1) != 0 {
-            panic!("Something went wrong")
-        }
+        panic_if_failed!(ctru_sys::svcSendSyncRequest(handle));
+        panic_if_failed!(*cmdbuf.wrapping_add(1) != 0);
 
         let mut mii: [u8; 0x5C] = mem::zeroed();
         let mut idx = 0usize;

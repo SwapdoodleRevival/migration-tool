@@ -6,14 +6,7 @@ use ctru_sys::{
     MEDIATYPE_SD, PATH_BINARY, PATH_UTF16, R_FAILED, R_SUCCEEDED, fsMakePath,
 };
 
-macro_rules! handle_error {
-    ($res: expr) => {
-        let res = $res;
-        if R_FAILED(res) {
-            panic!("Error {res}");
-        }
-    };
-}
+use crate::error::panic_if_failed;
 
 pub enum SwapdoodleRegion {
     EU,
@@ -67,7 +60,7 @@ impl ExtdataArchive {
 
         unsafe {
             let mut handle: Handle = mem::zeroed();
-            handle_error!(FSUSER_OpenFile(
+            panic_if_failed!(FSUSER_OpenFile(
                 &mut handle as *mut _,
                 self.archive,
                 fsMakePath(PATH_UTF16, path.as_ptr() as *const c_void),
@@ -86,7 +79,7 @@ impl ExtdataArchive {
             let mut offset: u64 = 0;
 
             loop {
-                handle_error!(FSFILE_Read(
+                panic_if_failed!(FSFILE_Read(
                     handle,
                     &mut read as *mut _,
                     offset,
@@ -102,7 +95,7 @@ impl ExtdataArchive {
                 }
             }
 
-            handle_error!(FSFILE_Close(handle));
+            panic_if_failed!(FSFILE_Close(handle));
         }
 
         file
@@ -116,11 +109,11 @@ impl ExtdataArchive {
 
             let path = fsMakePath(PATH_UTF16, path.as_ptr() as *const c_void);
 
-            handle_error!(FSUSER_DeleteFile(self.archive, path));
+            panic_if_failed!(FSUSER_DeleteFile(self.archive, path));
 
-            handle_error!(FSUSER_CreateFile(self.archive, path, 0, data.len() as u64));
+            panic_if_failed!(FSUSER_CreateFile(self.archive, path, 0, data.len() as u64));
 
-            handle_error!(FSUSER_OpenFile(
+            panic_if_failed!(FSUSER_OpenFile(
                 &mut handle as *mut _,
                 self.archive,
                 path,
@@ -130,7 +123,7 @@ impl ExtdataArchive {
 
             let mut written: u32 = 0;
 
-            handle_error!(FSFILE_Write(
+            panic_if_failed!(FSFILE_Write(
                 handle,
                 &mut written as *mut _,
                 0,
@@ -139,7 +132,7 @@ impl ExtdataArchive {
                 1
             ));
 
-            handle_error!(FSFILE_Close(handle));
+            panic_if_failed!(FSFILE_Close(handle));
         }
     }
 
@@ -168,7 +161,7 @@ impl ExtdataArchive {
 impl Drop for ExtdataArchive {
     fn drop(&mut self) {
         unsafe {
-            handle_error!(FSUSER_CloseArchive(self.archive));
+            panic_if_failed!(FSUSER_CloseArchive(self.archive));
         }
     }
 }
