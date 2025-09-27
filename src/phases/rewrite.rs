@@ -12,9 +12,9 @@ use libdoodle::{
     bpk1::{BPK1Blocks, BPK1File},
 };
 
+use crate::control_flow::MigrationFlow;
 use crate::extdata::ExtdataArchive;
 use crate::gui::{Gui, TOP_SCREEN_HEIGHT, TOP_SCREEN_WIDTH};
-use crate::phases::MigrationFlow;
 use crate::phases::OldToNewPIDMapping;
 use crate::phases::process;
 use crate::read::ReadExt;

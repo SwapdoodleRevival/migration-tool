@@ -1,16 +1,20 @@
+use crate::{control_flow::MigrationFlow, gui::Gui};
 use ctru::prelude::*;
+use std::process::{ExitCode, Termination};
 
-use crate::{gui::Gui, phases::MigrationFlow};
-
+mod control_flow;
 mod extdata;
 mod friend_list;
 mod gui;
 mod phases;
 mod read;
 
-fn main() {
+fn main() -> ExitCode {
     ctru::set_panic_hook(true);
-    _ = run();
+    match run() {
+        MigrationFlow::Continue(v) => v.report(),
+        MigrationFlow::Break(v) => v.report(),
+    }
 }
 
 fn run() -> MigrationFlow {

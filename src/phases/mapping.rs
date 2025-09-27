@@ -4,12 +4,13 @@ use citro2d_sys::{C2D_AlignCenter, C2D_AlignLeft, C2D_AlignRight, C2D_AtBaseline
 use ctru::prelude::{Apt, Gfx, Hid, KeyPad};
 
 use crate::{
+    control_flow::MigrationFlow,
     friend_list::MiiMap,
     gui::{
         Gui, TOP_SCREEN_HEIGHT, TOP_SCREEN_WIDTH,
         scrollable_view::{ScrollableView, ScrollableViewData},
     },
-    phases::{MigrationFlow, ReadResult, process},
+    phases::{ReadResult, process},
 };
 
 //                                    .- PID of note sender

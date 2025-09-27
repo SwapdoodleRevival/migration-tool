@@ -12,13 +12,14 @@ use libdoodle::{
 };
 
 use crate::{
+    control_flow::{AbortMigration, MigrationFlow},
     extdata::{ExtdataArchive, SwapdoodleRegion},
     friend_list::{self, MiiMap},
     gui::{
         Gui, TOP_SCREEN_WIDTH,
         scrollable_view::{ScrollableView, ScrollableViewData},
     },
-    phases::{MigrationFlow, process},
+    phases::process,
     read::ReadExt,
 };
 
@@ -147,7 +148,7 @@ impl<'a> Scene<'a> {
                 self.end_paint();
 
                 if self.hid.keys_down().contains(KeyPad::A) {
-                    return MigrationFlow::Break(());
+                    return MigrationFlow::Break(AbortMigration);
                 }
             }
         }
@@ -210,7 +211,7 @@ impl<'a> Scene<'a> {
                 process(self.apt, self.gfx, self.hid)?;
 
                 if self.hid.keys_down().contains(KeyPad::A) {
-                    return MigrationFlow::Break(());
+                    return MigrationFlow::Break(AbortMigration);
                 }
             }
         }
@@ -227,7 +228,7 @@ impl<'a> Scene<'a> {
                 process(self.apt, self.gfx, self.hid)?;
 
                 if self.hid.keys_down().contains(KeyPad::A) {
-                    return MigrationFlow::Break(());
+                    return MigrationFlow::Break(AbortMigration);
                 }
             }
         }
