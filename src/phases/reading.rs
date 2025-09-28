@@ -45,7 +45,7 @@ fn friendly_read_data(extdata: &ExtdataArchive) -> (MiiMap, MiiMap) {
     let mut manage = BPK1Blocks::new_from_bpk1_bytes(&extdata.read_manage()).unwrap();
     let cominf = manage
         .iter_mut()
-        .find(|k| k.name.as_bytes() == b"COMINF0")
+        .find(|k| k.name == c"COMINF0")
         .expect("File /letter/manage.bin should have a COMINF0, but it doesn't!");
 
     let mut cursor = Cursor::new(&cominf.data);

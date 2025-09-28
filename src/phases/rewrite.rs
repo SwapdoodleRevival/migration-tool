@@ -98,7 +98,7 @@ impl<'a> Scene<'a> {
         let mut manage = BPK1Blocks::new_from_bpk1_bytes(&extdata.read_manage()).unwrap();
         let cominf = manage
             .iter_mut()
-            .find(|k| k.name.as_bytes() == b"COMINF0")
+            .find(|k| k.name == c"COMINF0")
             .expect("manage.bin should have a COMINF0, but it doesn't!");
 
         let mut cursor = Cursor::new(&mut cominf.data);
@@ -121,8 +121,7 @@ impl<'a> Scene<'a> {
                 let mut letter =
                     BPK1Blocks::new_from_bpk1_bytes(&extdata.read_letter_index(letter_key))
                         .unwrap();
-                let common_block = match letter.iter_mut().find(|k| k.name.as_bytes() == b"COMMON1")
-                {
+                let common_block = match letter.iter_mut().find(|k| k.name == c"COMMON1") {
                     Some(k) => k,
                     None => continue,
                 };
