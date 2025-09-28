@@ -1,9 +1,9 @@
 use std::{mem, os::raw::c_void};
 
 use ctru_sys::{
-    FS_Archive, FS_Path, FSFILE_Close, FSFILE_Read, FSFILE_Write, FSUSER_CloseArchive,
-    FSUSER_CreateFile, FSUSER_DeleteFile, FSUSER_OpenArchive, FSUSER_OpenFile, Handle,
-    MEDIATYPE_SD, PATH_BINARY, PATH_UTF16, R_SUCCEEDED, fsMakePath,
+    ARCHIVE_EXTDATA, FS_Archive, FS_Path, FSFILE_Close, FSFILE_Read, FSFILE_Write,
+    FSUSER_CloseArchive, FSUSER_CreateFile, FSUSER_DeleteFile, FSUSER_OpenArchive, FSUSER_OpenFile,
+    Handle, MEDIATYPE_SD, PATH_BINARY, PATH_UTF16, R_SUCCEEDED, fsMakePath,
 };
 
 use crate::error::panic_if_failed;
@@ -20,7 +20,7 @@ pub struct ExtdataArchive {
 }
 
 impl ExtdataArchive {
-    pub fn open(region: SwapdoodleRegion) -> Result<ExtdataArchive, ()> {
+    pub fn open(region: SwapdoodleRegion) -> Result<ExtdataArchive, ctru_sys::Result> {
         let title_id: u64 = match region {
             SwapdoodleRegion::EU => 0x00040000001A2E00,
             SwapdoodleRegion::US => 0x00040000001A2D00,
@@ -31,32 +31,33 @@ impl ExtdataArchive {
 
         unsafe {
             let mut extdata_handle: FS_Archive = 0;
-
-            match R_SUCCEEDED(FSUSER_OpenArchive(
+            let result = FSUSER_OpenArchive(
                 &mut extdata_handle as *mut _,
-                0x00000006, // ARCHIVE_EXTDATA
+                ARCHIVE_EXTDATA,
                 FS_Path {
                     type_: PATH_BINARY,
                     size: 12,
                     data: &path as *const _ as *const c_void,
                 },
-            )) {
+            );
+
+            match R_SUCCEEDED(result) {
                 true => Ok(ExtdataArchive {
                     region,
                     archive: extdata_handle,
                 }),
-                false => Err(()),
+                false => Err(result),
             }
         }
     }
 
     pub fn read_file(&self, path: &str) -> Vec<u8> {
+        println!("Reading {}...", path);
+
         const BATCH_SIZE: u32 = 1024;
+        let mut file = vec![];
 
-        let mut file = Vec::<u8>::new();
-
-        let mut path: Vec<u16> = path.encode_utf16().collect();
-        path.push(0);
+        let path: Vec<u16> = path.encode_utf16().chain([0]).collect();
 
         unsafe {
             let mut handle: Handle = 0;
@@ -87,9 +88,7 @@ impl ExtdataArchive {
                     BATCH_SIZE
                 ));
                 offset += read as u64;
-                for i in 0..read {
-                    file.push(buffer[i as usize]);
-                }
+                file.extend_from_slice(&buffer[0..read as usize]);
                 if read < BATCH_SIZE {
                     break;
                 }
@@ -102,10 +101,11 @@ impl ExtdataArchive {
     }
 
     pub fn write_file(&self, path: &str, data: &[u8]) {
+        println!("Writing {}...", path);
+
         unsafe {
             let mut handle: Handle = 0;
-            let mut path: Vec<u16> = path.encode_utf16().collect();
-            path.push(0);
+            let path: Vec<u16> = path.encode_utf16().chain([0]).collect();
 
             let path = fsMakePath(PATH_UTF16, path.as_ptr() as *const c_void);
 
@@ -143,13 +143,11 @@ impl ExtdataArchive {
 
     pub fn read_letter_index(&self, key: u32) -> Vec<u8> {
         let filename = ExtdataArchive::filename_from_key(key);
-        println!("Reading {}...", filename);
         self.read_file(&filename)
     }
 
     pub fn write_letter_index(&self, key: u32, data: &[u8]) {
         let filename = ExtdataArchive::filename_from_key(key);
-        println!("Writing {}...", filename);
         self.write_file(&filename, data)
     }
 

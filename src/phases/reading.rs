@@ -41,7 +41,6 @@ fn friendly_read_data(extdata: &ExtdataArchive) -> (MiiMap, MiiMap) {
 
     println!("Reading your Swapdoodle extdata... ");
 
-    println!("Reading file /letter/manage.bin...");
     let mut manage = BPK1Blocks::new_from_bpk1_bytes(&extdata.read_manage()).unwrap();
     let cominf = manage
         .iter_mut()
@@ -73,13 +72,12 @@ fn friendly_read_data(extdata: &ExtdataArchive) -> (MiiMap, MiiMap) {
 
     let mut doodles = HashMap::<u32, MiiData>::new();
 
-    unknown_pids.iter().for_each(|row| {
-        let key = *row.1;
+    unknown_pids.into_iter().for_each(|(pid, key)| {
         if let Some(mii) = Letter::new_from_bpk1_bytes(&extdata.read_letter_index(key))
             .unwrap()
             .sender_mii
         {
-            doodles.insert(*row.0, mii);
+            doodles.insert(pid, mii);
         }
     });
 

@@ -4,7 +4,7 @@
 
 use ctru_sys::{FriendInfo, FriendKey, Handle};
 use libdoodle::blocks::miistd1::MiiData;
-use std::{collections::HashMap, mem};
+use std::{collections::HashMap, mem, ptr::copy_nonoverlapping};
 
 use crate::error::panic_if_failed;
 
@@ -28,8 +28,8 @@ pub fn load_friend_list() -> MiiMap {
 
 unsafe fn get_friend_info(friend_map: &mut MiiMap, handle: Handle) {
     unsafe {
-        let mut friend_keys: [FriendKey; 100] = mem::zeroed();
-        let mut friend_info: [FriendInfo; 100] = mem::zeroed();
+        let mut friend_keys: [FriendKey; FRIEND_LIST_SIZE as usize] = mem::zeroed();
+        let mut friend_info: [FriendInfo; FRIEND_LIST_SIZE as usize] = mem::zeroed();
 
         let cmdbuf = ctru_sys::getThreadCommandBuffer();
         *cmdbuf = 0x110080;
@@ -48,7 +48,7 @@ unsafe fn get_friend_info(friend_map: &mut MiiMap, handle: Handle) {
         let cmdbuf = ctru_sys::getThreadCommandBuffer();
         *cmdbuf = 0x1A00C4;
         *cmdbuf.wrapping_add(1) = num_friends;
-        *cmdbuf.wrapping_add(2) = 1; // Mask non-ascii characters
+        *cmdbuf.wrapping_add(2) = 0;
         *cmdbuf.wrapping_add(3) = 0;
         *cmdbuf.wrapping_add(4) = ((num_friends * mem::size_of::<FriendKey>() as u32) << 14) | 0x2;
         *cmdbuf.wrapping_add(5) = &friend_keys[0] as *const _ as u32;
@@ -91,13 +91,11 @@ unsafe fn get_my_info(friend_map: &mut MiiMap, handle: Handle) {
         panic_if_failed!(ctru_sys::svcSendSyncRequest(handle));
 
         let mut mii = [0; _];
-        let mut idx = 0usize;
-        for i in 2..25 {
-            for v in (*cmdbuf.wrapping_add(i)).to_le_bytes() {
-                mii[idx] = v;
-                idx += 1;
-            }
-        }
+        copy_nonoverlapping(
+            cmdbuf.wrapping_add(2) as *mut _,
+            mii.as_mut_ptr(),
+            mii.len(),
+        );
         panic_if_failed!(*cmdbuf.wrapping_add(1));
 
         friend_map.insert(pid, MiiData::from_bytes(mii).unwrap());

@@ -94,7 +94,6 @@ impl<'a> Scene<'a> {
     }
 
     fn do_rewrite(extdata: ExtdataArchive, mapping: OldToNewPIDMapping) {
-        println!("Reading manage.bin...");
         let mut manage = BPK1Blocks::new_from_bpk1_bytes(&extdata.read_manage()).unwrap();
         let cominf = manage
             .iter_mut()
@@ -133,7 +132,7 @@ impl<'a> Scene<'a> {
                 extdata.write_letter_index(letter_key, &out);
             }
 
-            cursor.set_position(pos + 0x80);
+            cursor.set_position(pos + 0x40 /* = sizeof COMMON1 */ + 0x40);
         }
 
         println!("Rewriting manage.bin...");
