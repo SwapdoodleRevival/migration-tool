@@ -30,7 +30,7 @@ impl ExtdataArchive {
         let path: [u32; 3] = [MEDIATYPE_SD.into(), extdata, 0];
 
         unsafe {
-            let mut extdata_handle: FS_Archive = mem::zeroed();
+            let mut extdata_handle: FS_Archive = 0;
 
             match R_SUCCEEDED(FSUSER_OpenArchive(
                 &mut extdata_handle as *mut _,
@@ -59,7 +59,7 @@ impl ExtdataArchive {
         path.push(0);
 
         unsafe {
-            let mut handle: Handle = mem::zeroed();
+            let mut handle: Handle = 0;
             panic_if_failed!(FSUSER_OpenFile(
                 &mut handle as *mut _,
                 self.archive,
@@ -74,8 +74,8 @@ impl ExtdataArchive {
                 .into()
             ));
 
-            let mut read: u32 = mem::zeroed();
-            let mut buffer: [u8; BATCH_SIZE as usize] = mem::zeroed();
+            let mut read: u32 = 0;
+            let mut buffer: [u8; BATCH_SIZE as usize] = [0; BATCH_SIZE as usize];
             let mut offset: u64 = 0;
 
             loop {
@@ -103,7 +103,7 @@ impl ExtdataArchive {
 
     pub fn write_file(&self, path: &str, data: &[u8]) {
         unsafe {
-            let mut handle: Handle = mem::zeroed();
+            let mut handle: Handle = 0;
             let mut path: Vec<u16> = path.encode_utf16().collect();
             path.push(0);
 
