@@ -1,6 +1,6 @@
 use std::{cmp::min, ops::Div};
 
-use crate::gui::Gui;
+use crate::gui::{colors, Gui};
 
 pub struct ScrollableView<'a, T: ScrollableViewData> {
     data: &'a T,
@@ -56,21 +56,21 @@ impl<'a, T: ScrollableViewData> ScrollableView<'a, T> {
         let mut y = self.y;
         for index in page_start..page_start + min(self.data.count_items() - page_start, max_items) {
             if index == self.highlighted_item {
-                gui.rect(self.x, y, self.width, self.item_height, gui.highlight_color);
+                gui.rect(self.x, y, self.width, self.item_height, colors::HIGHLIGHT);
             }
             self.data
                 .render_line(gui, index, self.x, y, self.width, self.item_height);
             y += self.item_height;
         }
 
-        gui.rect(self.x, self.y, 5.0, self.height, gui.dialog_overlay);
+        gui.rect(self.x, self.y, 5.0, self.height, colors::SHADOW);
         let indicator_height = self.height / count_pages as f32;
         gui.rect(
             self.x,
             self.y + indicator_height * current_page as f32,
             5.0,
             indicator_height,
-            gui.highlight_color,
+            colors::HIGHLIGHT,
         );
     }
 }

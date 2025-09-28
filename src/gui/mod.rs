@@ -1,8 +1,9 @@
 pub mod scrollable_view;
 pub mod text;
+pub mod colors;
 
 use citro2d_sys::{
-    C2D_AlignCenter, C2D_AtBaseline, C2D_Color32, C2D_CreateScreenTarget, C2D_DEFAULT_MAX_OBJECTS,
+    C2D_AlignCenter, C2D_AtBaseline, C2D_CreateScreenTarget, C2D_DEFAULT_MAX_OBJECTS,
     C2D_DrawRectSolid, C2D_DrawText, C2D_Init, C2D_Prepare, C2D_SceneBegin, C2D_TargetClear,
     C2D_Text, C2D_WithColor, C3D_RenderTarget,
 };
@@ -17,14 +18,6 @@ use crate::gui::text::TextBufferManager;
 pub struct Gui {
     pub screen: *mut C3D_RenderTarget,
     pub textbuf: TextBufferManager,
-    pub bg: u32,
-    pub fg: u32,
-    pub red: u32,
-    pub blue: u32,
-    pub dialog_overlay: u32,
-    pub highlight_color: u32,
-    pub side_friends: u32,
-    pub side_swapdoodle: u32,
 }
 
 pub const TOP_SCREEN_WIDTH: f32 = 400.0;
@@ -42,14 +35,6 @@ impl Gui {
             Self {
                 screen,
                 textbuf: TextBufferManager::init(512),
-                fg: C2D_Color32(255, 255, 255, 255),
-                red: C2D_Color32(255, 0, 0, 255),
-                blue: C2D_Color32(0, 40, 199, 255),
-                dialog_overlay: C2D_Color32(0, 0, 0, 120),
-                side_friends: C2D_Color32(245, 142, 11, 80),
-                side_swapdoodle: C2D_Color32(55, 83, 9, 100),
-                highlight_color: C2D_Color32(255, 255, 255, 90),
-                bg: C2D_Color32(20, 20, 20, 255),
             }
         }
     }
@@ -57,7 +42,7 @@ impl Gui {
     pub fn begin_frame(&self) {
         unsafe {
             C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-            C2D_TargetClear(self.screen, self.bg);
+            C2D_TargetClear(self.screen, colors::BACKGROUND);
             C2D_SceneBegin(self.screen);
         }
     }
@@ -85,7 +70,7 @@ impl Gui {
     }
 
     pub fn blue_rect(&self, x: f32, y: f32, width: f32, height: f32) {
-        self.rect(x, y, width, height, self.blue);
+        self.rect(x, y, width, height, colors::BLUE);
     }
 
     pub fn rect(&self, x: f32, y: f32, width: f32, height: f32, color: u32) {
@@ -102,17 +87,17 @@ impl Gui {
                 0.0,
                 TOP_SCREEN_WIDTH,
                 TOP_SCREEN_HEIGHT,
-                self.dialog_overlay,
+                colors::SHADOW,
             );
         }
     }
 
     pub fn text(&self, text: &C2D_Text, x: f32, y: f32, flags: u8, scale: f32) {
-        self._draw_text(text, x, y, flags | C2D_WithColor, self.fg, scale);
+        self._draw_text(text, x, y, flags | C2D_WithColor, colors::TEXT_PRIMARY, scale);
     }
 
     pub fn text_danger(&self, text: &C2D_Text, x: f32, y: f32, flags: u8, scale: f32) {
-        self._draw_text(text, x, y, flags | C2D_WithColor, self.red, scale);
+        self._draw_text(text, x, y, flags | C2D_WithColor, colors::TEXT_DANGER, scale);
     }
 
     fn _draw_text(&self, text: &C2D_Text, x: f32, y: f32, flags: u8, color: u32, scale: f32) {

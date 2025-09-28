@@ -7,10 +7,9 @@ use crate::{
     control_flow::MigrationFlow,
     friend_list::MiiMap,
     gui::{
-        Gui, TOP_SCREEN_HEIGHT, TOP_SCREEN_WIDTH,
-        scrollable_view::{ScrollableView, ScrollableViewData},
+        colors, scrollable_view::{ScrollableView, ScrollableViewData}, Gui, TOP_SCREEN_HEIGHT, TOP_SCREEN_WIDTH
     },
-    phases::{ReadResult, process},
+    phases::{process, ReadResult},
 };
 
 //                                    .- PID of note sender
@@ -296,7 +295,7 @@ impl<'a> Scene<'a> {
             20.0,
             TOP_SCREEN_WIDTH / 2.0,
             TOP_SCREEN_HEIGHT - 20.0,
-            self.gui.side_swapdoodle,
+            colors::SIDE_SWAPDOODLE,
         );
 
         self.gui.rect(
@@ -304,7 +303,7 @@ impl<'a> Scene<'a> {
             20.0,
             TOP_SCREEN_WIDTH / 2.0,
             TOP_SCREEN_HEIGHT - 20.0,
-            self.gui.side_friends,
+            colors::SIDE_FRIENDS,
         );
 
         self.gui.rect(
@@ -312,7 +311,7 @@ impl<'a> Scene<'a> {
             TOP_SCREEN_HEIGHT - 15.0,
             40.0 * 2.0,
             15.0,
-            self.gui.bg,
+            colors::BACKGROUND,
         );
 
         self.gui.text(
