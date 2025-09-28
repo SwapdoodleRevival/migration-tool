@@ -113,10 +113,10 @@ impl<'a> Scene<'a> {
             .unwrap()
             .sender_pid;
 
-            if let Some(new_pid) = mapping.get(&sender_pid) {
+            if let Some(&new_pid) = mapping.get(&sender_pid) {
                 let letter_key = cursor.read_u32_le().unwrap();
                 cursor.set_position(pos + 24);
-                cursor.write_all(&u32::to_le_bytes(*new_pid)).unwrap();
+                cursor.write_all(&u32::to_le_bytes(new_pid)).unwrap();
 
                 let mut letter =
                     BPK1Blocks::new_from_bpk1_bytes(&extdata.read_letter_index(letter_key))
@@ -127,7 +127,7 @@ impl<'a> Scene<'a> {
                     None => continue,
                 };
 
-                common_block.data[24..28].copy_from_slice(&u32::to_le_bytes(*new_pid));
+                common_block.data[24..28].copy_from_slice(&u32::to_le_bytes(new_pid));
 
                 let out = BPK1Blocks::bytes_from_bpk1_blocks(letter).unwrap();
 
