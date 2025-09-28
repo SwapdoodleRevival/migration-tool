@@ -90,7 +90,7 @@ unsafe fn get_my_info(friend_map: &mut MiiMap, handle: Handle) {
         *cmdbuf = 0x000A0000;
         panic_if_failed!(ctru_sys::svcSendSyncRequest(handle));
 
-        let mut mii: [u8; _] = [0; _];
+        let mut mii = [0; _];
         let mut idx = 0usize;
         for i in 2..25 {
             for v in (*cmdbuf.wrapping_add(i)).to_le_bytes() {

@@ -75,7 +75,7 @@ impl ExtdataArchive {
             ));
 
             let mut read: u32 = 0;
-            let mut buffer: [u8; BATCH_SIZE as usize] = [0; BATCH_SIZE as usize];
+            let mut buffer = [0; BATCH_SIZE as usize];
             let mut offset: u64 = 0;
 
             loop {
