@@ -93,14 +93,14 @@ impl Gui {
     }
 
     pub fn text(&self, text: &C2D_Text, x: f32, y: f32, flags: u8, scale: f32) {
-        self._draw_text(text, x, y, flags | C2D_WithColor, colors::TEXT_PRIMARY, scale);
+        self.draw_text(text, x, y, flags | C2D_WithColor, colors::TEXT_PRIMARY, scale);
     }
 
     pub fn text_danger(&self, text: &C2D_Text, x: f32, y: f32, flags: u8, scale: f32) {
-        self._draw_text(text, x, y, flags | C2D_WithColor, colors::TEXT_DANGER, scale);
+        self.draw_text(text, x, y, flags | C2D_WithColor, colors::TEXT_DANGER, scale);
     }
 
-    fn _draw_text(&self, text: &C2D_Text, x: f32, y: f32, flags: u8, color: u32, scale: f32) {
+    fn draw_text(&self, text: &C2D_Text, x: f32, y: f32, flags: u8, color: u32, scale: f32) {
         unsafe {
             C2D_DrawText(
                 text as *const _,

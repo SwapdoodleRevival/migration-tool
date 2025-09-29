@@ -7,9 +7,10 @@ use crate::{
     control_flow::MigrationFlow,
     friend_list::MiiMap,
     gui::{
-        colors, scrollable_view::{ScrollableView, ScrollableViewData}, Gui, TOP_SCREEN_HEIGHT, TOP_SCREEN_WIDTH
+        Gui, TOP_SCREEN_HEIGHT, TOP_SCREEN_WIDTH, colors,
+        scrollable_view::{ScrollableView, ScrollableViewData},
     },
-    phases::{process, ReadResult},
+    phases::{ReadResult, process},
 };
 
 //                                    .- PID of note sender
@@ -121,11 +122,10 @@ impl<'a> Scene<'a> {
 
     fn auto_match_by_mac(mapping: &RefCell<OldToNewPIDMapping>, read: &ReadResult) {
         let mut mapping = mapping.borrow_mut();
-        for doodler in &read.doodles {
-            let mac = doodler.1.creator_mac_address;
-            for friend in &read.friends {
-                if friend.1.creator_mac_address == mac {
-                    mapping.insert(*doodler.0, *friend.0);
+        for (&doodler_pid, doodler_mii) in &read.doodles {
+            for (&friend_pid, friend_mii) in &read.friends {
+                if friend_mii.creator_mac_address == doodler_mii.creator_mac_address {
+                    mapping.insert(doodler_pid, friend_pid);
                     break;
                 }
             }
