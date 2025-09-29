@@ -12,6 +12,3 @@ citro2d-sys = { git = "https://github.com/fatfingers23/citro3d-rs" }
 
 [package.metadata.cargo-3ds]
 romfs_dir = "romfs"
-
-[build-dependencies]
-bindgen = "0.71.0"
