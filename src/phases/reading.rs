@@ -6,7 +6,7 @@ use std::{
 use citro2d_sys::{C2D_AlignCenter, C2D_AlignLeft, C2D_Text};
 use ctru::prelude::{Apt, Gfx, Hid, KeyPad};
 use libdoodle::{
-    blocks::{common1, miistd1::MiiData},
+    blocks::common1,
     bpk1::{BPK1Blocks, BPK1File},
     files::letter::Letter,
 };
@@ -94,6 +94,12 @@ pub struct Scene<'a> {
     detected_more_reg: C2D_Text,
     detected_more_reg_line1: C2D_Text,
     detected_more_reg_line2: C2D_Text,
+    no_unknown_line1: C2D_Text,
+    no_unknown_line2: C2D_Text,
+    no_friends_line1: C2D_Text,
+    no_friends_line2: C2D_Text,
+    no_friends_line3: C2D_Text,
+    press_a_exit: C2D_Text,
     reg_eu: C2D_Text,
     reg_us: C2D_Text,
     reg_jp: C2D_Text,
@@ -125,6 +131,22 @@ impl<'a> Scene<'a> {
                 .textbuf
                 .make_static_text(c"This tool can only work with one at a time."),
             detected_more_reg_line2: gui.textbuf.make_static_text(c"Please select a region:"),
+            no_unknown_line1: gui
+                .textbuf
+                .make_static_text(c"We didn't find any notes from an unknown sender."),
+            no_unknown_line2: gui
+                .textbuf
+                .make_static_text(c"You shouldn't need to run this tool."),
+            no_friends_line1: gui
+                .textbuf
+                .make_static_text(c"Your friend list seems to be empty."),
+            no_friends_line2: gui
+                .textbuf
+                .make_static_text(c"Because Swapdoodle notes are tied to your friend list,"),
+            no_friends_line3: gui
+                .textbuf
+                .make_static_text(c"there is not much we can do if it is empty."),
+            press_a_exit: gui.textbuf.make_static_text(c"Press \u{E000} to exit."),
             reg_eu: gui.textbuf.make_static_text(c"Europe"),
             reg_us: gui.textbuf.make_static_text(c"USA"),
             reg_jp: gui.textbuf.make_static_text(c"Japan"),
@@ -193,20 +215,11 @@ impl<'a> Scene<'a> {
         let (friends, doodles) = friendly_read_data(&extdata);
 
         if friends.len() == 1 {
-            println!("Your friend list is empty.");
-            println!();
-            println!("Swapdoodle notes are tied to friend data.");
-            println!("I hope this doesn't sound rude, but here goes:");
-            println!("If you don't have friends, there is not much we can do.");
-            println!();
-            println!("Feel free to re-run this tool later!");
-            println!();
-            println!("If you believe this is in error, please let us know!");
-            println!();
-            println!("Press (A) to exit.");
-
             loop {
                 process(self.apt, self.gfx, self.hid)?;
+                self.begin_paint();
+                self.paint_no_friends();
+                self.end_paint();
 
                 if self.hid.keys_down().contains(KeyPad::A) {
                     return MigrationFlow::Break(AbortMigration);
@@ -215,15 +228,11 @@ impl<'a> Scene<'a> {
         }
 
         if doodles.is_empty() {
-            println!("We didn't find any notes from an unknown sender.");
-            println!("You shouldn't need to run this tool.");
-            println!();
-            println!("If you believe this is in error, please let us know!");
-            println!();
-            println!("Press (A) to exit.");
-
             loop {
                 process(self.apt, self.gfx, self.hid)?;
+                self.begin_paint();
+                self.paint_no_unknown_senders();
+                self.end_paint();
 
                 if self.hid.keys_down().contains(KeyPad::A) {
                     return MigrationFlow::Break(AbortMigration);
@@ -286,6 +295,28 @@ impl<'a> Scene<'a> {
 
         self.gui
             .text(&self.detected_more_reg_line2, 10.0, 70.0, 0, 0.5);
+    }
+
+    fn paint_no_unknown_senders(&self) {
+        self.gui.text(&self.no_unknown_line1, 10.0, 40.0, 0, 0.5);
+
+        self.gui.text(&self.no_unknown_line2, 10.0, 55.0, 0, 0.5);
+
+        self.gui.text(&self.error_lmk, 10.0, 70.0, 0, 0.5);
+
+        self.gui.text(&self.press_a_exit, 10.0, 95.0, 0, 0.5);
+    }
+
+    fn paint_no_friends(&self) {
+        self.gui.text(&self.no_friends_line1, 10.0, 40.0, 0, 0.5);
+
+        self.gui.text(&self.no_friends_line2, 10.0, 70.0, 0, 0.5);
+
+        self.gui.text(&self.no_friends_line3, 10.0, 85.0, 0, 0.5);
+
+        self.gui.text(&self.error_lmk, 10.0, 120.0, 0, 0.5);
+
+        self.gui.text(&self.press_a_exit, 10.0, 140.0, 0, 0.5);
     }
 }
 
