@@ -122,10 +122,10 @@ impl<'a> Scene<'a> {
 
     fn auto_match_by_mac(mapping: &RefCell<OldToNewPIDMapping>, read: &ReadResult) {
         let mut mapping = mapping.borrow_mut();
-        for (&doodler_pid, doodler_mii) in &read.doodles {
-            for (&friend_pid, friend_mii) in &read.friends {
+        for (doodler_pid, doodler_mii) in &read.doodles {
+            for (friend_pid, friend_mii) in &read.friends {
                 if friend_mii.creator_mac_address == doodler_mii.creator_mac_address {
-                    mapping.insert(doodler_pid, friend_pid);
+                    mapping.insert(*doodler_pid, *friend_pid);
                     break;
                 }
             }
@@ -156,7 +156,7 @@ impl<'a> Scene<'a> {
             } else if self.hid.keys_down().contains(KeyPad::DPAD_UP) {
                 view.up();
             } else if self.hid.keys_down().contains(KeyPad::A) {
-                let doodle_pal_pid = *read
+                let doodle_pal_pid = read
                     .doodles
                     .iter()
                     .enumerate()
@@ -186,7 +186,7 @@ impl<'a> Scene<'a> {
                         } else if self.hid.keys_down().contains(KeyPad::DPAD_UP) {
                             view.up();
                         } else if self.hid.keys_down().contains(KeyPad::A) {
-                            let new_pid = *read
+                            let new_pid = read
                                 .friends
                                 .iter()
                                 .enumerate()
@@ -381,9 +381,9 @@ impl ScrollableViewData for MappingPicker<'_> {
             .1
             .0;
         let mapping_value = self.mapping.borrow();
-        let mapped_to = mapping_value.get(current_pid);
+        let mapped_to = mapping_value.get(&current_pid);
         gui.text(
-            &self.pid_name_texts[current_pid],
+            &self.pid_name_texts[&current_pid],
             x + 15.0,
             y,
             C2D_AlignLeft,
@@ -428,9 +428,9 @@ impl ScrollableViewData for FriendPicker<'_> {
             .enumerate()
             .find(|i| i.0 == index)
             .unwrap()
-            .1;
+            .1.0;
         gui.text(
-            &self.pid_name_texts[current.0],
+            &self.pid_name_texts[&current],
             x + 15.0,
             y,
             C2D_AlignLeft,

@@ -4,16 +4,16 @@
 
 use ctru_sys::{FriendInfo, FriendKey, Handle};
 use libdoodle::blocks::miistd1::MiiData;
-use std::{collections::HashMap, mem, ptr::copy_nonoverlapping};
+use std::{mem, ptr::copy_nonoverlapping};
 
 use crate::error::panic_if_failed;
 
-pub type MiiMap = HashMap<u32, MiiData>;
+pub type MiiMap = Vec<(u32, MiiData)>;
 
 const FRIEND_LIST_SIZE: u32 = 100; // max number of friends is 100
 
 pub fn load_friend_list() -> MiiMap {
-    let mut friend_map = HashMap::new();
+    let mut friend_map = MiiMap::new();
 
     unsafe {
         let mut frd_handle: Handle = 0;
@@ -71,7 +71,7 @@ unsafe fn get_friend_info(friend_map: &mut MiiMap, handle: Handle) {
                     .unwrap();
 
             match MiiData::from_bytes(mii_bytes) {
-                Ok(mii) => _ = friend_map.insert(pid, mii),
+                Ok(mii) => _ = friend_map.push((pid, mii)),
                 Err(e) => println!("{:#?}", e),
             }
         }
@@ -98,6 +98,6 @@ unsafe fn get_my_info(friend_map: &mut MiiMap, handle: Handle) {
         );
         panic_if_failed!(*cmdbuf.wrapping_add(1));
 
-        friend_map.insert(pid, MiiData::from_bytes(mii).unwrap());
+        friend_map.push((pid, MiiData::from_bytes(mii).unwrap()));
     }
 }

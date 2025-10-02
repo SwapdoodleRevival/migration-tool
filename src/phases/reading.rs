@@ -61,7 +61,7 @@ fn friendly_read_data(extdata: &ExtdataArchive) -> (MiiMap, MiiMap) {
                 .unwrap();
         let sender_pid = common.sender_pid;
 
-        if !friends.contains_key(&sender_pid) {
+        if friends.iter().find(|el| el.0 == sender_pid).is_none() {
             let letter_key = cursor.read_u32_le().unwrap();
             unknown_pids.insert(sender_pid, letter_key);
         }
@@ -70,14 +70,14 @@ fn friendly_read_data(extdata: &ExtdataArchive) -> (MiiMap, MiiMap) {
     }
     println!("done.");
 
-    let mut doodles = HashMap::<u32, MiiData>::new();
+    let mut doodles = MiiMap::new();
 
     unknown_pids.into_iter().for_each(|(pid, key)| {
         if let Some(mii) = Letter::new_from_bpk1_bytes(&extdata.read_letter_index(key))
             .unwrap()
             .sender_mii
         {
-            doodles.insert(pid, mii);
+            doodles.push((pid, mii));
         }
     });
 
