@@ -13,7 +13,7 @@ use libdoodle::{
 
 use crate::{
     control_flow::{AbortMigration, MigrationFlow},
-    extdata::{ExtdataArchive, SwapdoodleRegion},
+    extdata::{ExtdataArchive, COMINF0Read, SwapdoodleRegion, get_cominf0_cursor},
     friend_list::{self, MiiMap},
     gui::{
         Gui, TOP_SCREEN_WIDTH,
@@ -42,12 +42,7 @@ fn friendly_read_data(extdata: &ExtdataArchive) -> (MiiMap, MiiMap) {
     println!("Reading your Swapdoodle extdata... ");
 
     let mut manage = BPK1Blocks::new_from_bpk1_bytes(&extdata.read_manage()).unwrap();
-    let cominf = manage
-        .iter_mut()
-        .find(|k| k.name == c"COMINF0")
-        .expect("File /letter/manage.bin should have a COMINF0, but it doesn't!");
-
-    let mut cursor = Cursor::new(&cominf.data);
+    let mut cursor = get_cominf0_cursor(&mut manage);
 
     let mut unknown_pids = HashMap::<u32, u32>::new();
 
@@ -55,19 +50,14 @@ fn friendly_read_data(extdata: &ExtdataArchive) -> (MiiMap, MiiMap) {
     cursor.set_position(0x40);
 
     for _ in 0..count {
-        let pos = cursor.position();
-        let common =
-            common1::CommonInfo::from_bytes(&(cursor.read_const_num_of_bytes::<0x40>().unwrap()))
-                .unwrap();
+        let (common, letter_key) = cursor.read_cominf0_entry().unwrap();
         let sender_pid = common.sender_pid;
 
         if friends.iter().find(|el| el.0 == sender_pid).is_none() {
-            let letter_key = cursor.read_u32_le().unwrap();
             unknown_pids.insert(sender_pid, letter_key);
         }
-
-        cursor.set_position(pos + 0x80);
     }
+
     println!("done.");
 
     let mut doodles = MiiMap::new();

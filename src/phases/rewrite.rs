@@ -1,8 +1,8 @@
 use crate::{
     control_flow::MigrationFlow,
-    extdata::ExtdataArchive,
+    extdata::{get_cominf0_cursor, ExtdataArchive, COMINF0Read},
     gui::{Gui, TOP_SCREEN_HEIGHT, TOP_SCREEN_WIDTH},
-    phases::{OldToNewPIDMapping, process},
+    phases::{process, OldToNewPIDMapping},
     read::ReadExt,
 };
 use citro2d_sys::{C2D_AlignCenter, C2D_Text};
@@ -95,27 +95,21 @@ impl<'a> Scene<'a> {
 
     fn do_rewrite(extdata: ExtdataArchive, mapping: OldToNewPIDMapping) {
         let mut manage = BPK1Blocks::new_from_bpk1_bytes(&extdata.read_manage()).unwrap();
-        let cominf = manage
-            .iter_mut()
-            .find(|k| k.name == c"COMINF0")
-            .expect("manage.bin should have a COMINF0, but it doesn't!");
-
-        let mut cursor = Cursor::new(&mut cominf.data);
+        let mut cursor = get_cominf0_cursor(&mut manage);
 
         let count = cursor.read_u32_le().unwrap();
         cursor.set_position(0x40);
+
         for _ in 0..count {
-            let pos = cursor.position();
-            let sender_pid = common1::CommonInfo::from_bytes(
-                &(cursor.read_const_num_of_bytes::<0x40>().unwrap()),
-            )
-            .unwrap()
-            .sender_pid;
+            let start_pos = cursor.position();
+            let (common, letter_key) = cursor.read_cominf0_entry().unwrap();
+            let sender_pid = common.sender_pid;
+            let end_pos = cursor.position();
 
             if let Some(&new_pid) = mapping.get(&sender_pid) {
-                let letter_key = cursor.read_u32_le().unwrap();
-                cursor.set_position(pos + 24);
+                cursor.set_position(start_pos + 24);
                 cursor.write_all(&u32::to_le_bytes(new_pid)).unwrap();
+                cursor.set_position(end_pos);
 
                 let mut letter =
                     BPK1Blocks::new_from_bpk1_bytes(&extdata.read_letter_index(letter_key))
@@ -131,8 +125,6 @@ impl<'a> Scene<'a> {
 
                 extdata.write_letter_index(letter_key, &out);
             }
-
-            cursor.set_position(pos + 0x40 /* = sizeof COMMON1 */ + 0x40);
         }
 
         println!("Rewriting manage.bin...");

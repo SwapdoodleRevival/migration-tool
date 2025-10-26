@@ -1,12 +1,21 @@
-use std::{mem, os::raw::c_void};
+use std::{
+    collections::HashMap,
+    io::{self, Cursor, Read},
+    mem,
+    os::raw::c_void,
+};
 
 use ctru_sys::{
     ARCHIVE_EXTDATA, FS_Archive, FS_Path, FSFILE_Close, FSFILE_Read, FSFILE_Write,
     FSUSER_CloseArchive, FSUSER_CreateFile, FSUSER_DeleteFile, FSUSER_OpenArchive, FSUSER_OpenFile,
     Handle, MEDIATYPE_SD, PATH_BINARY, PATH_UTF16, R_SUCCEEDED, fsMakePath,
 };
+use libdoodle::{
+    blocks::common1::{self, CommonInfo},
+    bpk1::{BPK1Block, BPK1Blocks, BPK1File},
+};
 
-use crate::error::panic_if_failed;
+use crate::{error::panic_if_failed, friend_list::MiiMap, read::ReadExt};
 
 pub enum SwapdoodleRegion {
     EU,
@@ -186,3 +195,24 @@ impl From<FileAttributes> for u32 {
         unsafe { mem::transmute(val) }
     }
 }
+
+pub fn get_cominf0_cursor(manage: &mut Vec<BPK1Block>) -> Cursor<&mut Vec<u8>> {
+    let cominf = manage
+        .iter_mut()
+        .find(|k| k.name == c"COMINF0")
+        .expect("manage.bin should have a COMINF0, but it doesn't!");
+
+    let cursor = Cursor::new(&mut cominf.data);
+    cursor
+}
+
+pub trait COMINF0Read: ReadExt {
+    fn read_cominf0_entry(&mut self) -> io::Result<(CommonInfo, u32)> {
+        let chunk = self.read_const_num_of_bytes::<0x80>()?;
+        let common = common1::CommonInfo::from_bytes(&chunk[0..0x40]).unwrap();
+        let letter_key = u32::from_le_bytes(chunk[0x40..0x44].try_into().unwrap());
+        Ok((common, letter_key))
+    }
+}
+
+impl<T: ReadExt> COMINF0Read for T {}
