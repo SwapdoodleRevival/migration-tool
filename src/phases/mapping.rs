@@ -428,7 +428,8 @@ impl ScrollableViewData for FriendPicker<'_> {
             .enumerate()
             .find(|i| i.0 == index)
             .unwrap()
-            .1.0;
+            .1
+            .0;
         gui.text(
             &self.pid_name_texts[&current],
             x + 15.0,

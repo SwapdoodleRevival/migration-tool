@@ -1,6 +1,6 @@
 use std::{cmp::min, ops::Div};
 
-use crate::gui::{colors, Gui};
+use crate::gui::{Gui, colors};
 
 pub struct ScrollableView<'a, T: ScrollableViewData> {
     data: &'a T,

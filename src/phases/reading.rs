@@ -1,19 +1,18 @@
 use std::{
     collections::HashMap,
-    io::{self, Cursor, Write},
+    io::{self, Write},
 };
 
 use citro2d_sys::{C2D_AlignCenter, C2D_AlignLeft, C2D_Text};
 use ctru::prelude::{Apt, Gfx, Hid, KeyPad};
 use libdoodle::{
-    blocks::common1,
     bpk1::{BPK1Blocks, BPK1File},
     files::letter::Letter,
 };
 
 use crate::{
     control_flow::{AbortMigration, MigrationFlow},
-    extdata::{ExtdataArchive, COMINF0Read, SwapdoodleRegion, get_cominf0_cursor},
+    extdata::{COMINF0Read, ExtdataArchive, SwapdoodleRegion, get_cominf0_cursor},
     friend_list::{self, MiiMap},
     gui::{
         Gui, TOP_SCREEN_WIDTH,
@@ -53,7 +52,7 @@ fn friendly_read_data(extdata: &ExtdataArchive) -> (MiiMap, MiiMap) {
         let (common, letter_key) = cursor.read_cominf0_entry().unwrap();
         let sender_pid = common.sender_pid;
 
-        if friends.iter().find(|el| el.0 == sender_pid).is_none() {
+        if friends.iter().any(|el| el.0 == sender_pid) {
             unknown_pids.insert(sender_pid, letter_key);
         }
     }

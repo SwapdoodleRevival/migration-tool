@@ -1,6 +1,6 @@
+pub mod colors;
 pub mod scrollable_view;
 pub mod text;
-pub mod colors;
 
 use citro2d_sys::{
     C2D_AlignCenter, C2D_AtBaseline, C2D_CreateScreenTarget, C2D_DEFAULT_MAX_OBJECTS,
@@ -93,11 +93,25 @@ impl Gui {
     }
 
     pub fn text(&self, text: &C2D_Text, x: f32, y: f32, flags: u8, scale: f32) {
-        self.draw_text(text, x, y, flags | C2D_WithColor, colors::TEXT_PRIMARY, scale);
+        self.draw_text(
+            text,
+            x,
+            y,
+            flags | C2D_WithColor,
+            colors::TEXT_PRIMARY,
+            scale,
+        );
     }
 
     pub fn text_danger(&self, text: &C2D_Text, x: f32, y: f32, flags: u8, scale: f32) {
-        self.draw_text(text, x, y, flags | C2D_WithColor, colors::TEXT_DANGER, scale);
+        self.draw_text(
+            text,
+            x,
+            y,
+            flags | C2D_WithColor,
+            colors::TEXT_DANGER,
+            scale,
+        );
     }
 
     fn draw_text(&self, text: &C2D_Text, x: f32, y: f32, flags: u8, color: u32, scale: f32) {

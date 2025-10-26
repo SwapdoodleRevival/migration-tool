@@ -65,13 +65,13 @@ unsafe fn get_friend_info(friend_map: &mut MiiMap, handle: Handle) {
                 // There seems to be a bug in how FriendInfo is deserialized.
                 // The Mii data is simply incorrect, the version should always be 3, but it isn't
                 // Here I'm recreating the _bindgen_opaque_blob approach we had in earlier versions
-                mem::transmute::<_, [u8; mem::size_of::<FriendInfo>()]>(friend_info[i as usize])
+                mem::transmute::<FriendInfo, [u8; mem::size_of::<FriendInfo>()]>(friend_info[i as usize])
                     [128..220]
                     .try_into()
                     .unwrap();
 
             match MiiData::from_bytes(mii_bytes) {
-                Ok(mii) => _ = friend_map.push((pid, mii)),
+                Ok(mii) => friend_map.push((pid, mii)),
                 Err(e) => println!("{:#?}", e),
             }
         }

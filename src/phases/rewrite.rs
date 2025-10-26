@@ -1,17 +1,14 @@
 use crate::{
     control_flow::MigrationFlow,
-    extdata::{get_cominf0_cursor, ExtdataArchive, COMINF0Read},
+    extdata::{COMINF0Read, ExtdataArchive, get_cominf0_cursor},
     gui::{Gui, TOP_SCREEN_HEIGHT, TOP_SCREEN_WIDTH},
-    phases::{process, OldToNewPIDMapping},
+    phases::{OldToNewPIDMapping, process},
     read::ReadExt,
 };
 use citro2d_sys::{C2D_AlignCenter, C2D_Text};
 use ctru::prelude::*;
-use libdoodle::{
-    blocks::common1,
-    bpk1::{BPK1Blocks, BPK1File},
-};
-use std::io::{Cursor, Write};
+use libdoodle::bpk1::{BPK1Blocks, BPK1File};
+use std::io::Write;
 
 pub fn rewrite<'a>(apt: &'a Apt, gfx: &'a Gfx, hid: &'a mut Hid, gui: &'a mut Gui) -> Scene<'a> {
     Scene::new(apt, gfx, hid, gui)

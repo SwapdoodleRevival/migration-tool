@@ -1,6 +1,5 @@
 use std::{
-    collections::HashMap,
-    io::{self, Cursor, Read},
+    io::{self, Cursor},
     mem,
     os::raw::c_void,
 };
@@ -12,10 +11,10 @@ use ctru_sys::{
 };
 use libdoodle::{
     blocks::common1::{self, CommonInfo},
-    bpk1::{BPK1Block, BPK1Blocks, BPK1File},
+    bpk1::BPK1Block,
 };
 
-use crate::{error::panic_if_failed, friend_list::MiiMap, read::ReadExt};
+use crate::{error::panic_if_failed, read::ReadExt};
 
 pub enum SwapdoodleRegion {
     EU,
@@ -196,14 +195,13 @@ impl From<FileAttributes> for u32 {
     }
 }
 
-pub fn get_cominf0_cursor(manage: &mut Vec<BPK1Block>) -> Cursor<&mut Vec<u8>> {
+pub fn get_cominf0_cursor(manage: &mut [BPK1Block]) -> Cursor<&mut Vec<u8>> {
     let cominf = manage
         .iter_mut()
         .find(|k| k.name == c"COMINF0")
         .expect("manage.bin should have a COMINF0, but it doesn't!");
 
-    let cursor = Cursor::new(&mut cominf.data);
-    cursor
+    Cursor::new(&mut cominf.data)
 }
 
 pub trait COMINF0Read: ReadExt {
