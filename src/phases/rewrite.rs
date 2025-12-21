@@ -113,7 +113,10 @@ impl<'a> Scene<'a> {
                         .unwrap();
                 let common_block = match letter.iter_mut().find(|k| k.name == c"COMMON1") {
                     Some(k) => k,
-                    None => continue,
+                    None => {
+                        println!("Skipped letter {letter_key} as it did not have a COMMON1 section.");
+                        continue;
+                    },
                 };
 
                 common_block.data[24..28].copy_from_slice(&u32::to_le_bytes(new_pid));
