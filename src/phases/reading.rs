@@ -52,7 +52,7 @@ fn friendly_read_data(extdata: &ExtdataArchive) -> (MiiMap, MiiMap) {
         let (common, letter_key) = cursor.read_cominf0_entry().unwrap();
         let sender_pid = common.sender_pid;
 
-        if friends.iter().any(|el| el.0 == sender_pid) {
+        if !friends.iter().any(|el| el.0 == sender_pid) {
             unknown_pids.insert(sender_pid, letter_key);
         }
     }
