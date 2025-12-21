@@ -7,6 +7,8 @@ edition = "2024"
 ctru-rs = { git = "https://github.com/rust3ds/ctru-rs" }
 ctru-sys = { git = "https://github.com/rust3ds/ctru-rs" }
 libdoodle = { git = "https://github.com/SwapdoodleRevival/libdoodle.git", version = "0.1.0" }
+citro3d-sys = { git = "https://github.com/fatfingers23/citro3d-rs" }
+citro2d-sys = { git = "https://github.com/fatfingers23/citro3d-rs" }
 
 [package.metadata.cargo-3ds]
 romfs_dir = "romfs"

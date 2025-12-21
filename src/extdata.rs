@@ -1,90 +1,187 @@
-use std::{mem, os::raw::c_void, time::Instant, u32};
+use std::{
+    io::{self, Cursor},
+    mem,
+    os::raw::c_void,
+};
 
 use ctru_sys::{
-    self, FS_Archive, FS_DirectoryEntry, FS_MediaType, FS_Path, FSDIR_Close, FSDIR_Control,
-    FSDIR_Read, FSFILE_Close, FSFILE_Read, FSUSER_OpenArchive, FSUSER_OpenDirectory,
-    FSUSER_OpenFile, Handle, MEDIATYPE_SD, PATH_BINARY, PATH_UTF16, R_FAILED, R_SUCCEEDED,
-    fsMakePath,
+    ARCHIVE_EXTDATA, FS_Archive, FS_Path, FSFILE_Close, FSFILE_Read, FSFILE_Write,
+    FSUSER_CloseArchive, FSUSER_CreateFile, FSUSER_DeleteFile, FSUSER_OpenArchive, FSUSER_OpenFile,
+    Handle, MEDIATYPE_SD, PATH_BINARY, PATH_UTF16, R_SUCCEEDED, fsMakePath,
 };
-use libdoodle::bpk1::{BPK1File, letter::Letter};
+use libdoodle::{
+    blocks::common1::{self, CommonInfo},
+    bpk1::BPK1Block,
+};
 
-macro_rules! handle_error {
-    ($res: expr) => {
-        let res = $res;
-        if R_FAILED(res) {
-            panic!("Error {res}");
-        }
-    };
+use crate::{error::panic_if_failed, read::ReadExt};
+
+pub enum SwapdoodleRegion {
+    EU,
+    US,
+    JP,
 }
 
-pub fn read() -> impl Iterator<Item = (FS_DirectoryEntry, String, Letter)> {
-    // returns (file_path, vec<u8>)
-    let extdata_handle: FS_Archive = open_title_extdata(MEDIATYPE_SD, 0x00040000001A2E00).unwrap();
-
-    println!("handle is {}", extdata_handle);
-    list_dir(extdata_handle, "/letter/0000\0")
-        .into_iter()
-        .map(move |v| {
-            let filename = String::from_utf16(&v.name).unwrap();
-            let filename = format!("/letter/0000/{filename}\0");
-            let file = read_file(extdata_handle, &filename);
-            let letter = Letter::new_from_bpk1_bytes(&file).unwrap();
-            (v, filename, letter)
-        })
+pub struct ExtdataArchive {
+    pub region: SwapdoodleRegion,
+    pub archive: FS_Archive,
 }
 
-struct DirectoryIterator {
-    handle: Handle,
-}
-
-impl Iterator for DirectoryIterator {
-    type Item = FS_DirectoryEntry;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let mut read: u32 = 0;
-        let entry = unsafe {
-            let mut entry: FS_DirectoryEntry = mem::zeroed();
-            handle_error!(FSDIR_Read(
-                self.handle,
-                &mut read as *mut _,
-                1,
-                &mut entry as *mut _,
-            ));
-            entry
+impl ExtdataArchive {
+    pub fn open(region: SwapdoodleRegion) -> Result<ExtdataArchive, ctru_sys::Result> {
+        let title_id: u64 = match region {
+            SwapdoodleRegion::EU => 0x00040000001A2E00,
+            SwapdoodleRegion::US => 0x00040000001A2D00,
+            SwapdoodleRegion::JP => 0x00040000001A2C00,
         };
-        if read == 1 { Some(entry) } else { None }
+        let extdata = (title_id as u32) >> 8;
+        let path: [u32; 3] = [MEDIATYPE_SD.into(), extdata, 0];
+
+        unsafe {
+            let mut extdata_handle: FS_Archive = 0;
+            let result = FSUSER_OpenArchive(
+                &mut extdata_handle as *mut _,
+                ARCHIVE_EXTDATA,
+                FS_Path {
+                    type_: PATH_BINARY,
+                    size: 12,
+                    data: &path as *const _ as *const c_void,
+                },
+            );
+
+            match R_SUCCEEDED(result) {
+                true => Ok(ExtdataArchive {
+                    region,
+                    archive: extdata_handle,
+                }),
+                false => Err(result),
+            }
+        }
+    }
+
+    pub fn read_file(&self, path: &str) -> Vec<u8> {
+        println!("Reading {}...", path);
+
+        const BATCH_SIZE: u32 = 1024;
+        let mut file = vec![];
+
+        let path: Vec<u16> = path.encode_utf16().chain([0]).collect();
+
+        unsafe {
+            let mut handle: Handle = 0;
+            panic_if_failed!(FSUSER_OpenFile(
+                &mut handle as *mut _,
+                self.archive,
+                fsMakePath(PATH_UTF16, path.as_ptr() as *const c_void),
+                OpenFlags::Read as u32,
+                FileAttributes {
+                    is_directory: false,
+                    is_hidden: false,
+                    is_archive: false,
+                    readonly: true
+                }
+                .into()
+            ));
+
+            let mut read: u32 = 0;
+            let mut buffer = [0; BATCH_SIZE as usize];
+            let mut offset: u64 = 0;
+
+            loop {
+                panic_if_failed!(FSFILE_Read(
+                    handle,
+                    &mut read as *mut _,
+                    offset,
+                    &mut buffer as *mut _ as *mut c_void,
+                    BATCH_SIZE
+                ));
+                offset += read as u64;
+                file.extend_from_slice(&buffer[0..read as usize]);
+                if read < BATCH_SIZE {
+                    break;
+                }
+            }
+
+            panic_if_failed!(FSFILE_Close(handle));
+        }
+
+        file
+    }
+
+    pub fn write_file(&self, path: &str, data: &[u8]) {
+        println!("Writing {}...", path);
+
+        unsafe {
+            let mut handle: Handle = 0;
+            let path: Vec<u16> = path.encode_utf16().chain([0]).collect();
+
+            let path = fsMakePath(PATH_UTF16, path.as_ptr() as *const c_void);
+
+            panic_if_failed!(FSUSER_DeleteFile(self.archive, path));
+
+            panic_if_failed!(FSUSER_CreateFile(self.archive, path, 0, data.len() as u64));
+
+            panic_if_failed!(FSUSER_OpenFile(
+                &mut handle as *mut _,
+                self.archive,
+                path,
+                OpenFlags::Write as u32,
+                0
+            ));
+
+            let mut written: u32 = 0;
+
+            panic_if_failed!(FSFILE_Write(
+                handle,
+                &mut written as *mut _,
+                0,
+                data.as_ptr() as *const _,
+                data.len() as u32,
+                1
+            ));
+
+            panic_if_failed!(FSFILE_Close(handle));
+        }
+    }
+
+    fn filename_from_key(key: u32) -> String {
+        let folder = key / 200;
+        format!("/letter/{:04}/lt{:04}.bin", folder, key)
+    }
+
+    pub fn read_letter_index(&self, key: u32) -> Vec<u8> {
+        let filename = ExtdataArchive::filename_from_key(key);
+        self.read_file(&filename)
+    }
+
+    pub fn write_letter_index(&self, key: u32, data: &[u8]) {
+        let filename = ExtdataArchive::filename_from_key(key);
+        self.write_file(&filename, data)
+    }
+
+    pub fn read_manage(&self) -> Vec<u8> {
+        self.read_file("/letter/manage.bin")
     }
 }
 
-impl Drop for DirectoryIterator {
+impl Drop for ExtdataArchive {
     fn drop(&mut self) {
         unsafe {
-            handle_error!(FSDIR_Close(self.handle));
+            panic_if_failed!(FSUSER_CloseArchive(self.archive));
         }
-    }
-}
-
-fn list_dir(archive: FS_Archive, path: &str) -> DirectoryIterator {
-    unsafe {
-        let mut handle: Handle = mem::zeroed();
-        let path: Vec<u16> = path.encode_utf16().collect();
-        handle_error!(FSUSER_OpenDirectory(
-            &mut handle as *mut _,
-            archive,
-            fsMakePath(PATH_UTF16, path.as_ptr() as *const c_void),
-        ));
-        DirectoryIterator { handle }
     }
 }
 
 #[repr(u32)]
+#[allow(unused)]
 enum OpenFlags {
     Read = 1,
     Write = 2,
     Create = 4,
 }
 
-#[repr(packed)]
+#[repr(C, packed)]
+#[allow(unused)]
 struct FileAttributes {
     is_directory: bool,
     is_hidden: bool,
@@ -92,76 +189,28 @@ struct FileAttributes {
     readonly: bool,
 }
 
-impl Into<u32> for FileAttributes {
-    fn into(self) -> u32 {
-        unsafe { mem::transmute(self) }
+impl From<FileAttributes> for u32 {
+    fn from(val: FileAttributes) -> Self {
+        unsafe { mem::transmute(val) }
     }
 }
 
-fn read_file(archive: FS_Archive, path: &str) -> Vec<u8> {
-    const BATCH_SIZE: u32 = 1024;
-    let mut file = Vec::<u8>::new();
+pub fn get_cominf0_cursor(manage: &mut [BPK1Block]) -> Cursor<&mut Vec<u8>> {
+    let cominf = manage
+        .iter_mut()
+        .find(|k| k.name == c"COMINF0")
+        .expect("manage.bin should have a COMINF0, but it doesn't!");
 
-    unsafe {
-        let mut handle: Handle = mem::zeroed();
-        let path: Vec<u16> = path.encode_utf16().collect();
-        handle_error!(FSUSER_OpenFile(
-            &mut handle as *mut _,
-            archive,
-            fsMakePath(PATH_UTF16, path.as_ptr() as *const c_void),
-            OpenFlags::Read as u32,
-            FileAttributes {
-                is_directory: false,
-                is_hidden: false,
-                is_archive: false,
-                readonly: true
-            }
-            .into()
-        ));
-
-        let mut read: u32 = mem::zeroed();
-        let mut buffer: [u8; BATCH_SIZE as usize] = mem::zeroed();
-        let mut offset: u64 = 0;
-
-        loop {
-            handle_error!(FSFILE_Read(
-                handle,
-                &mut read as *mut _,
-                offset,
-                &mut buffer as *mut _ as *mut c_void,
-                BATCH_SIZE
-            ));
-            offset += read as u64;
-            for i in 0..read {
-                file.push(buffer[i as usize]);
-            }
-            if read < BATCH_SIZE {
-                break;
-            }
-        }
-
-        handle_error!(FSFILE_Close(handle));
-    }
-    file
+    Cursor::new(&mut cominf.data)
 }
 
-fn open_title_extdata(media_type: FS_MediaType, title_id: u64) -> Option<FS_Archive> {
-    unsafe {
-        let mut extdata_handle: FS_Archive = mem::zeroed();
-
-        let extdata = (title_id as u32) >> 8;
-
-        let path: [u32; 3] = [media_type.into(), extdata, 0];
-
-        R_SUCCEEDED(FSUSER_OpenArchive(
-            &mut extdata_handle as *mut _,
-            0x00000006, // ARCHIVE_EXTDATA
-            FS_Path {
-                type_: PATH_BINARY,
-                size: 12,
-                data: &path as *const _ as *const c_void,
-            },
-        ))
-        .then_some(extdata_handle)
+pub trait COMINF0Read: ReadExt {
+    fn read_cominf0_entry(&mut self) -> io::Result<(CommonInfo, u32)> {
+        let chunk = self.read_const_num_of_bytes::<0x80>()?;
+        let common = common1::CommonInfo::from_bytes(&chunk[0..0x40]).unwrap();
+        let letter_key = u32::from_le_bytes(chunk[0x40..0x44].try_into().unwrap());
+        Ok((common, letter_key))
     }
 }
+
+impl<T: ReadExt> COMINF0Read for T {}

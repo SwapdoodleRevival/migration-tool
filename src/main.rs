@@ -1,39 +1,33 @@
+use crate::{control_flow::MigrationFlow, gui::Gui};
 use ctru::prelude::*;
+use std::process::{ExitCode, Termination};
 
-mod friend_list;
+mod control_flow;
+pub(crate) mod error;
 mod extdata;
+mod friend_list;
+mod gui;
+mod phases;
+mod read;
 
-fn main() {
+fn main() -> ExitCode {
+    ctru::set_panic_hook(true);
+    match run() {
+        MigrationFlow::Continue(v) => v.report(),
+        MigrationFlow::Break(v) => v.report(),
+    }
+}
+
+fn run() -> MigrationFlow {
     let apt = Apt::new().unwrap();
     let mut hid = Hid::new().unwrap();
-    let gfx = Gfx::new().unwrap();
-    // let mut soc = Soc::new().unwrap();
-    // soc.redirect_to_3dslink(true, true).unwrap();
-    ctru::applets::error::set_panic_hook(true);
+    let gfx: Gfx = Gfx::new().unwrap();
+    let _console = Console::new(gfx.bottom_screen.borrow_mut());
+    let mut gui = Gui::init();
 
-    let topConsole = Console::new(gfx.top_screen.borrow_mut());
-    let bottomConsole = Console::new(gfx.bottom_screen.borrow_mut());
-
-    topConsole.select();
-
-    for (pid, mii) in friend_list::load_friend_list() {
-        println!("{}: {}", pid, mii.mii_name);
-    }
-
-    println!("Reading notes:");
-    for (file, filename, letter) in extdata::read() {
-        println!("Got {} from {}", filename, match letter.sender_mii {
-            Some(mii) => mii.mii_name,
-            None => "<no mii>".to_string()
-        });
-    }
-
-    while apt.main_loop() {
-        gfx.wait_for_vblank();
-
-        hid.scan_input();
-        if hid.keys_down().contains(KeyPad::START) {
-            break;
-        }
-    }
+    phases::intro(&apt, &gfx, &mut hid, &mut gui).run()?;
+    let (extdata, read_data) = phases::reading(&apt, &gfx, &mut hid, &mut gui).run()?;
+    let mapping = phases::mapping(&apt, &gfx, &mut hid, &mut gui).run(read_data)?;
+    phases::rewrite(&apt, &gfx, &mut hid, &mut gui).run(extdata, mapping)?;
+    MigrationFlow::Continue(())
 }
