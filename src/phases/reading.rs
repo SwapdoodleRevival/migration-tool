@@ -59,16 +59,18 @@ fn friendly_read_data(extdata: &ExtdataArchive) -> (MiiMap, MiiMap) {
 
     println!("done.");
 
-    let mut doodles = MiiMap::new();
-
-    unknown_pids.into_iter().for_each(|(pid, key)| {
-        if let Some(mii) = Letter::new_from_bpk1_bytes(&extdata.read_letter_index(key))
-            .unwrap()
-            .sender_mii
-        {
-            doodles.push((pid, mii));
-        }
-    });
+    let doodles = unknown_pids
+        .into_iter()
+        .filter_map(|(pid, key)| {
+            match Letter::new_from_bpk1_bytes(&extdata.read_letter_index(key)) {
+                Ok(file) => file.sender_mii.map(|mii| (pid, mii)),
+                Err(_) => {
+                    println!("Failed to parse letter {key}");
+                    None
+                }
+            }
+        })
+        .collect();
 
     println!("All done!");
 
