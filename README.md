@@ -1,6 +1,6 @@
 # Swapdoodle Migration Tool
 
-This utility will read your Swapdoodle extdata and assist you in migrating your save data.
+This utility will read your Swapdoodle extdata and assist you in migrating your notes for use with Pretendo Network.
 
 [Download it from the Releases page.](https://github.com/SwapdoodleRevival/migration-tool/releases/)
 
